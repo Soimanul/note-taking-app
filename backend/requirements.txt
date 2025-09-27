@@ -1,0 +1,9 @@
+django
+djangorestframework
+
+# PostgreSQL Connector
+psycopg2-binary
+
+# Celery for Asynchronous Tasks
+celery
+redis
