@@ -1,1 +1,1 @@
-# Individual-Assignment-1
+# note-taking-app
