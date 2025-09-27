@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    ports:
+      - "5432:5433" # map to port 5433 on host machine to avoid local psql conflicts
+
+  # Redis Message Broker Service
+  redis:
+    image: redis:6-alpine
+
+  # Django Web Server Service
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+      - redis
+
+  # Celery Worker Service
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./.env
+    depends_on:
+      - web
+      - db
+      - redis
+
+# Named volume to persist database data
+volumes:
+  postgres_data:
