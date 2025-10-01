@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import Document, GeneratedContent, Log
 
 # ==============================================================================
-#  User Serializer
+#  1. User Serializer
 # ==============================================================================
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 # ==============================================================================
-#  Document Serializer
+#  2. Document Serializer
 # ==============================================================================
 class DocumentSerializer(serializers.ModelSerializer):
     """
@@ -29,7 +29,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 
 # ==============================================================================
-#  GeneratedContent Serializer
+#  3. GeneratedContent Serializer
 # ==============================================================================
 class GeneratedContentSerializer(serializers.ModelSerializer):
     """
