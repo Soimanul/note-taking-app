@@ -1,5 +1,8 @@
+# Django Core
 django
 djangorestframework
+python-dotenv
+djangorestframework-simplejwt 
 
 # PostgreSQL Connector
 psycopg2-binary
@@ -7,3 +10,19 @@ psycopg2-binary
 # Celery for Asynchronous Tasks
 celery
 redis
+
+# Document Parsing
+PyMuPDF
+python-docx
+Markdown
+
+# AI & Vector Database Clients
+https://download.pytorch.org/whl/cpu-cxx11-abi/torch-2.7.1%2Bcpu.cxx11.abi-cp311-cp311-linux_x86_64.whl#sha256=fd4a2dd1fd0bc8103fd5575a5decaa9d6a7669c02f0763cc314b71a447a5af82
+google-generativeai
+sentence-transformers
+pinecone-client
+
+# Testing
+pytest
+pytest-django
+pytest-mock
