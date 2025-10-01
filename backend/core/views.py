@@ -7,7 +7,7 @@ import os
 
 from .models import Document
 from .serializers import DocumentSerializer, UserSerializer
-from .tasks import process_document # We will uncomment this after creating the task
+# from .tasks import process_document
 
 # ==============================================================================
 #  Custom Permissions
