@@ -1,8 +1,28 @@
 from django.contrib.auth.models import User
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from .models import Document, GeneratedContent, Log
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.core.files.storage import FileSystemStorage
+import os
+
+from .models import Document
 from .serializers import DocumentSerializer, UserSerializer
+from .tasks import process_document # We will uncomment this after creating the task
+
+# ==============================================================================
+#  Custom Permissions
+# ==============================================================================
+class IsOwner(permissions.BasePermission):
+    """
+    Custom permission to only allow owners of an object to edit or view it.
+    """
+    def has_object_permission(self, request, view, obj):
+        # Read permissions are allowed to any request,
+        # so we'll always allow GET, HEAD or OPTIONS requests.
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        # Write permissions are only allowed to the owner of the document.
+        return obj.user == request.user
 
 # ==============================================================================
 #  1. User Registration View
@@ -23,12 +43,46 @@ class DocumentListCreate(generics.ListCreateAPIView):
     """
     Handles GET and POST requests for docs only from authenticated users.
     """
-
+    serializer_class = DocumentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
     def get_queryset(self):
         """
         This view should only return documents owned by the currently authenticated user.
         """
         return Document.objects.filter(user=self.request.user).order_by('-uploadDate')
+
+    def create(self, request, *args, **kwargs):
+        """
+        Overries  default create method to handle file upload, save its metadata, and triggerthe assync processing task
+        """
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"detail": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        fs = FileSystemStorage(location='media/uploads/')
+        filename = fs.get_available_name(uploaded_file.name)
+        saved_path = fs.save(filename,uploaded_file)
+        filepath = fs.path(saved_path)
+
+        data_for_serializer = {
+            'filename': uploaded_file.name,
+            'filepath': filepath,
+            'fileType': os.path.splitext(uploaded_file.name)[1].lower().strip('.'),
+            'size': uploaded_file.size,
+        }
+
+        serializer = self.get_serializer(data=data_for_serializer)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+
+        new_document_id = serializer.instance.id
+
+        #process_document.delay(str(new_document_id))
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         """
