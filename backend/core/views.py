@@ -10,7 +10,7 @@ from .serializers import DocumentSerializer, UserSerializer
 # from .tasks import process_document
 
 # ==============================================================================
-#  Custom Permissions
+# 0. Custom Permissions
 # ==============================================================================
 class IsOwner(permissions.BasePermission):
     """
@@ -90,3 +90,19 @@ class DocumentListCreate(generics.ListCreateAPIView):
         """
 
         serializer.save(user=self.request.user)
+
+# ==============================================================================
+#  3. Document Detail, Update & Delete View
+# ==============================================================================
+class DocumentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Handles GET, PUT/PATCH, and DELETE requests for a single document.
+    """
+    serializer_class = DocumentSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner] 
+
+    def get_queryset(self):
+        """
+        This view should only return documents owned by the currently authenticated user.
+        """
+        return Document.objects.filter(user=self.request.user)
