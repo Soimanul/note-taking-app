@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -6,16 +7,16 @@ from django.contrib.auth.models import User
 # ==============================================================================
 class Document(models.Model):
     """
-    Stores metadata for each user-uploaded file.
-    id
-    user
-    filename
-    filepath
-    fileType
-    size
-    uploadDate
-    status (for async AI processing)
-    version
+    Stores metadata for each user-uploaded file.\n
+        id,
+        user,
+        filename,
+        filepath,
+        fileType,
+        size,
+        uploadDate,
+        status (for async AI processing),
+        version
     """
 
     STATUS_CHOICES = [
@@ -44,12 +45,12 @@ class Document(models.Model):
 # ==============================================================================
 class GeneratedContent(models.Model):
     """
-    Stores the associated content to each document.
-    id
-    document
-    contentType
-    contentData
-    createdAt
+    Stores the associated content to each document.\n
+        id,
+        document,
+        contentType,
+        contentData,
+        createdAt
     """
     
     # Fields
@@ -67,12 +68,12 @@ class GeneratedContent(models.Model):
 # ==============================================================================
 class Log(models.Model):
     """
-    Stores logs for error debugging and tracking events
-        id
-        user
-        document
-        level
-        message
+    Stores logs for error debugging and tracking events\n
+        id,
+        user,
+        document,
+        level,
+        message,
         createdAt
     """
     LEVEL_CHOICES = [
@@ -81,6 +82,7 @@ class Log(models.Model):
         ('ERROR', 'Error'),
     ]
     
+    # Fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='logs')
     document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, blank=True, related_name='logs')
