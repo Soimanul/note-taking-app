@@ -37,7 +37,7 @@ class GeminiAdapter(GenerativeAIAdapter):
             if not api_key:
                 raise ValueError("GOOGLE_API_KEY environment variable not set.")
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-1.5-flash")
+            self.model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
             print("Gemini Adapter initialized successfully.")
         except Exception as e:
             self.model = None
