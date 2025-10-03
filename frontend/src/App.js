@@ -557,6 +557,8 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
 const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDocument }) => {
     const [activeTab, setActiveTab] = useState('Notes');
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingSummary, setLoadingSummary] = useState(false);
+    const [loadingQuiz, setLoadingQuiz] = useState(false);
     const [error, setError] = useState('');
     const [originalContent, setOriginalContent] = useState('');
     const [markdownContent, setMarkdownContent] = useState('');
@@ -624,20 +626,42 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
     
     // Separate effect to update content when generatedContent changes
     useEffect(() => {
+        // Find content by type (should only be one of each type now)
         const notes = generatedContent.find(c => c.contentType === 'notes');
         const summary = generatedContent.find(c => c.contentType === 'summary');
         const quiz = generatedContent.find(c => c.contentType === 'quiz');
         
         // Always update content to match the current document
-        // If content doesn't exist, set to empty string
         const newNotesContent = notes?.contentData?.markdown_text || '';
         const newSummaryContent = summary?.contentData?.markdown_text || '';
         const newQuizContent = quiz?.contentData?.markdown_text || '';
         
+        // Debug logging
+        console.log('Content update for doc:', docProp?.id, {
+            hasNotes: !!notes,
+            hasSummary: !!summary,
+            hasQuiz: !!quiz,
+            summaryLength: newSummaryContent.length,
+            generatedContentCount: generatedContent.length,
+            prevSummaryLength: summaryContent.length,
+            prevQuizLength: quizContent.length
+        });
+        
+        // Clear loading states when new content appears
+        if (newSummaryContent && newSummaryContent !== summaryContent && loadingSummary) {
+            console.log('New summary content detected, clearing loading state');
+            setLoadingSummary(false);
+        }
+        
+        if (newQuizContent && newQuizContent !== quizContent && loadingQuiz) {
+            console.log('New quiz content detected, clearing loading state');
+            setLoadingQuiz(false);
+        }
+        
         setMarkdownContent(newNotesContent);
         setSummaryContent(newSummaryContent);
         setQuizContent(newQuizContent);
-    }, [generatedContent, docProp?.id]); // Added docProp?.id to force update on document change
+    }, [generatedContent, docProp?.id, summaryContent, quizContent, loadingSummary, loadingQuiz]);
     
     // Load content into editors when it changes
     useEffect(() => {
@@ -685,24 +709,30 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
 
     
     const handleGenerate = async (contentType) => {
+        // Set specific loading state
+        if (contentType === 'summary') setLoadingSummary(true);
+        else if (contentType === 'quiz') setLoadingQuiz(true);
+        
         setIsLoading(true);
         setError('');
         try {
-            const newContent = await apiClient.generateContent(user, docProp.id, contentType);
+            console.log(`Generating ${contentType} for document:`, docProp.id);
             
-            // Update the parent component's state
-            onContentGenerated(docProp.id, newContent);
+            // Trigger the generation (this is async on backend)
+            const response = await apiClient.generateContent(user, docProp.id, contentType);
+            console.log(`${contentType} generation request sent, response:`, response);
             
-            // Update local content state immediately to trigger editor updates
-            if (contentType === 'summary' && newContent?.contentData?.markdown_text) {
-                setSummaryContent(newContent.contentData.markdown_text);
-            } else if (contentType === 'quiz' && newContent?.contentData?.markdown_text) {
-                setQuizContent(newContent.contentData.markdown_text);
-            }
+            // Don't clear loading states here - they'll be cleared when content appears
+            // The existing polling will update the documents and activeDocument
+            setIsLoading(false); // Only clear general loading
+            
         } catch (err) {
+            console.error(`Failed to generate ${contentType}:`, err);
             setError(`Failed to generate ${contentType}.`);
-        } finally {
+            // Clear loading states on error
             setIsLoading(false);
+            if (contentType === 'summary') setLoadingSummary(false);
+            else if (contentType === 'quiz') setLoadingQuiz(false);
         }
     };
     
@@ -831,8 +861,26 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                 } else {
                     return (
                         <div className="text-center p-6">
-                            <button onClick={() => handleGenerate('summary')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">
-                                Generate Summary
+                            <button 
+                                onClick={() => handleGenerate('summary')} 
+                                disabled={loadingSummary}
+                                className={`text-sm px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2 mx-auto ${
+                                    loadingSummary 
+                                        ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed' 
+                                        : 'bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600'
+                                }`}
+                            >
+                                {loadingSummary ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Generating Summary...
+                                    </>
+                                ) : (
+                                    'Generate Summary'
+                                )}
                             </button>
                         </div>
                     );
@@ -852,8 +900,26 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                 } else {
                     return (
                         <div className="text-center p-6">
-                            <button onClick={() => handleGenerate('quiz')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">
-                                Generate Quiz
+                            <button 
+                                onClick={() => handleGenerate('quiz')} 
+                                disabled={loadingQuiz}
+                                className={`text-sm px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2 mx-auto ${
+                                    loadingQuiz 
+                                        ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed' 
+                                        : 'bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600'
+                                }`}
+                            >
+                                {loadingQuiz ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Generating Quiz...
+                                    </>
+                                ) : (
+                                    'Generate Quiz'
+                                )}
                             </button>
                         </div>
                     );
@@ -1088,7 +1154,11 @@ const App = () => {
     // This function updates the state to reflect newly generated content
     const updateDocs = (prevDocs) => prevDocs.map(doc => {
         if (doc.id === docId) {
-            const newGeneratedContent = [...(doc.generated_content || []), newContent];
+            const existingContent = doc.generated_content || [];
+            // Remove any existing content of the same type and add the new one
+            const filteredContent = existingContent.filter(c => c.contentType !== newContent.contentType);
+            const newGeneratedContent = [...filteredContent, newContent];
+            
             // Also update active document if it's the one
             if(activeDocument?.id === docId) {
                 setActiveDocument(prevActive => ({...prevActive, generated_content: newGeneratedContent}));
