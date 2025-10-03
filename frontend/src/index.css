@@ -20,11 +20,50 @@
 
 /* Dark mode palette overrides: ensure neutral greys (no blue tint) */
 @layer base {
+  /* Add smooth but fast transitions for dark mode */
+  html {
+    transition: background-color 0.15s ease-out;
+  }
+  
   body {
     @apply bg-gray-100 text-gray-900;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
   }
   .dark body {
     @apply bg-gray-950 text-gray-100;
+  }
+  
+  /* Fast synchronized transitions for dark mode - all at 150ms for instant feel */
+  *,
+  *::before,
+  *::after {
+    transition: background-color 0.15s ease-out,
+                border-color 0.15s ease-out,
+                color 0.15s ease-out,
+                fill 0.15s ease-out,
+                stroke 0.15s ease-out !important;
+  }
+
+  /* Performance: minimize transitions inside BlockNote tree during theme flip */
+  .bn-mantine *,
+  .bn-mantine *::before,
+  .bn-mantine *::after {
+    transition: none !important;
+  }
+  
+  /* Sidebar and document list keep color transitions synced but width is separate */
+  aside, .sidebar, .document-list {
+    transition: background-color 0.15s ease-out,
+                border-color 0.15s ease-out,
+                width 0.15s ease-out !important;
+  }
+  
+  button, a, input, select, textarea {
+    transition: background-color 0.15s ease-out,
+                border-color 0.15s ease-out,
+                color 0.15s ease-out,
+                transform 0.1s ease-out,
+                box-shadow 0.1s ease-out !important;
   }
   
   /* Consistent shadows for floating effect in both modes */
@@ -49,6 +88,214 @@
     -ms-user-select: none;
   }
   
+  /* Optimize sidebar animations for smoothness */
+  aside, .sidebar, aside * {
+    will-change: auto;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Force GPU acceleration for better performance */
+  aside, .sidebar {
+    transform: translate3d(0, 0, 0);
+  }
+  
+  /* Override MDEditor colors to match our neutral gray theme */
+  .w-md-editor {
+    background-color: #fafafa !important;
+    color: #171717 !important;
+    --md-editor-color: #171717 !important;
+  }
+  
+  .dark .w-md-editor {
+    background-color: #0a0a0a !important;
+    color: #f5f5f5 !important;
+    --md-editor-color: #f5f5f5 !important;
+  }
+  
+  .w-md-editor-toolbar {
+    background-color: #f5f5f5 !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+  }
+  
+  .dark .w-md-editor-toolbar {
+    background-color: #171717 !important;
+    border-bottom: 1px solid #262626 !important;
+  }
+  
+  .w-md-editor-content {
+    background-color: #ffffff !important;
+  }
+  
+  .dark .w-md-editor-content {
+    background-color: #0a0a0a !important;
+  }
+  
+  .w-md-editor-text {
+    color: #171717 !important;
+    background-color: #ffffff !important;
+  }
+  
+  .dark .w-md-editor-text {
+    color: #f5f5f5 !important;
+    background-color: #0a0a0a !important;
+  }
+  
+  .w-md-editor-text-pre, .w-md-editor-text-input, .w-md-editor-input, .w-md-editor-area textarea {
+    background-color: #ffffff !important;
+    color: #171717 !important;
+    caret-color: #171717 !important;
+  }
+  
+  .dark .w-md-editor-text-pre, .dark .w-md-editor-text-input, .dark .w-md-editor-input, .dark .w-md-editor-area textarea {
+    background-color: #0a0a0a !important;
+    color: #f5f5f5 !important;
+    caret-color: #f5f5f5 !important;
+  }
+  
+  /* Force textarea visibility and text color */
+  .w-md-editor-text-input, .w-md-editor-area textarea {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  /* Force all text within editor to be visible - more aggressive */
+  .w-md-editor-text-pre, 
+  .w-md-editor-text-pre > *, 
+  .w-md-editor-text-input, 
+  textarea.w-md-editor-text-input,
+  .w-md-editor textarea,
+  .w-md-editor-area textarea,
+  .w-md-editor-text,
+  .w-md-editor-text * {
+    color: #171717 !important;
+    -webkit-text-fill-color: #171717 !important;
+  }
+  
+  .dark .w-md-editor-text-pre, 
+  .dark .w-md-editor-text-pre > *, 
+  .dark .w-md-editor-text-input, 
+  .dark textarea.w-md-editor-text-input,
+  .dark .w-md-editor textarea,
+  .dark .w-md-editor-area textarea,
+  .dark .w-md-editor-text,
+  .dark .w-md-editor-text * {
+    color: #f5f5f5 !important;
+    -webkit-text-fill-color: #f5f5f5 !important;
+  }
+  
+  .w-md-editor-preview {
+    background-color: #fafafa !important;
+    color: #171717 !important;
+  }
+  
+  .dark .w-md-editor-preview {
+    background-color: #0a0a0a !important;
+    color: #f5f5f5 !important;
+  }
+  
+  /* Force preview content to be visible */
+  .wmde-markdown,
+  .wmde-markdown *,
+  .w-md-editor-preview *,
+  .wmde-markdown-color {
+    color: #171717 !important;
+    -webkit-text-fill-color: #171717 !important;
+  }
+  
+  .dark .wmde-markdown,
+  .dark .wmde-markdown *,
+  .dark .w-md-editor-preview *,
+  .dark .wmde-markdown-color {
+    color: #f5f5f5 !important;
+    -webkit-text-fill-color: #f5f5f5 !important;
+  }
+  
+  /* Specific markdown elements in preview */
+  .wmde-markdown h1,
+  .wmde-markdown h2,
+  .wmde-markdown h3,
+  .wmde-markdown h4,
+  .wmde-markdown h5,
+  .wmde-markdown h6,
+  .wmde-markdown p,
+  .wmde-markdown li,
+  .wmde-markdown span,
+  .wmde-markdown strong,
+  .wmde-markdown em {
+    color: #171717 !important;
+  }
+  
+  .dark .wmde-markdown h1,
+  .dark .wmde-markdown h2,
+  .dark .wmde-markdown h3,
+  .dark .wmde-markdown h4,
+  .dark .wmde-markdown h5,
+  .dark .wmde-markdown h6,
+  .dark .wmde-markdown p,
+  .dark .wmde-markdown li,
+  .dark .wmde-markdown span,
+  .dark .wmde-markdown strong,
+  .dark .wmde-markdown em {
+    color: #f5f5f5 !important;
+  }
+  
+  /* Code blocks styling */
+  .wmde-markdown code,
+  .wmde-markdown pre code {
+    background-color: #e5e5e5 !important;
+    color: #171717 !important;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.875rem;
+  }
+  
+  .dark .wmde-markdown code,
+  .dark .wmde-markdown pre code {
+    background-color: #262626 !important;
+    color: #f5f5f5 !important;
+  }
+  
+  .wmde-markdown pre {
+    background-color: #e5e5e5 !important;
+    border: 1px solid #d4d4d4 !important;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
+  
+  .dark .wmde-markdown pre {
+    background-color: #262626 !important;
+    border: 1px solid #404040 !important;
+  }
+  
+  .wmde-markdown pre code {
+    background-color: transparent !important;
+    padding: 0;
+    border-radius: 0;
+  }
+  
+  /* MDEditor toolbar buttons */
+  .w-md-editor-toolbar button {
+    color: #525252 !important;
+  }
+  
+  .dark .w-md-editor-toolbar button {
+    color: #a3a3a3 !important;
+  }
+  
+  .w-md-editor-toolbar button:hover {
+    background-color: #e5e5e5 !important;
+  }
+  
+  .dark .w-md-editor-toolbar button:hover {
+    background-color: #262626 !important;
+  }
+  
   /* Hide scrollbars but keep functionality */
   * {
     scrollbar-width: thin;
@@ -64,10 +311,39 @@
     overflow: hidden;
   }
   
+  /* Fade in animation for formatting toolbar */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-up {
+    animation: fade-in 0.15s ease-out;
+  }
+  
+  /* Style search input clear button (x) */
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 16px;
+    width: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+    background-size: 16px 16px;
+    cursor: pointer;
+  }
+  
+  .dark input[type="search"]::-webkit-search-cancel-button {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+  }
+  
   /* Custom scrollbar styles - Light mode */
   ::-webkit-scrollbar {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
   }
   
   ::-webkit-scrollbar-track {
@@ -75,13 +351,20 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    background: #d4d4d4;
+    background: transparent;
     border-radius: 6px;
-    border: 3px solid #f5f5f5;
   }
   
-  ::-webkit-scrollbar-thumb:hover {
+  /* Show scrollbar on hover */
+  *:hover::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  
+  *:hover::-webkit-scrollbar-thumb:hover {
     background: #a3a3a3;
+    background-clip: padding-box;
   }
   
   /* Custom scrollbar styles - Dark mode */
@@ -90,22 +373,31 @@
   }
   
   .dark ::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  
+  .dark *:hover::-webkit-scrollbar-thumb {
     background: #404040;
-    border-radius: 6px;
-    border: 3px solid #0a0a0a;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
   
-  .dark ::-webkit-scrollbar-thumb:hover {
+  .dark *:hover::-webkit-scrollbar-thumb:hover {
     background: #525252;
+    background-clip: padding-box;
   }
   
-  /* Firefox scrollbar styles */
+  /* Firefox scrollbar styles - auto-hide */
   * {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  
+  *:hover {
     scrollbar-color: #d4d4d4 transparent;
   }
   
-  .dark * {
+  .dark *:hover {
     scrollbar-color: #404040 transparent;
   }
   .dark {
@@ -124,6 +416,167 @@
     /* Border color for dark mode - visible light gray */
     --color-border: #2a2a2a;
   }
+}
+
+/* BlockNote code block styles */
+.bn-mantine pre,
+.bn-mantine code,
+.bn-mantine pre code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+}
+.bn-mantine pre {
+  background-color: #e5e5e5 !important;
+  border: 1px solid #d4d4d4 !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem 1rem !important;
+  overflow-x: auto !important;
+}
+.dark .bn-mantine pre {
+  background-color: #262626 !important;
+  border-color: #404040 !important;
+}
+.bn-mantine code {
+  background-color: #e5e5e5 !important;
+  color: #171717 !important;
+  padding: 0.125rem 0.25rem !important;
+  border-radius: 0.25rem !important;
+  font-size: 0.875rem !important;
+}
+.dark .bn-mantine code {
+  background-color: #262626 !important;
+  color: #f5f5f5 !important;
+}
+
+/* Hide CodeMirror gutters (line numbers / indent guides) in BlockNote code blocks */
+.bn-mantine .CodeMirror-gutter,
+.bn-mantine .CodeMirror-gutters,
+.bn-mantine .cm-gutters,
+.bn-mantine .cm-gutter,
+.bn-mantine .cm-foldGutter {
+  display: none !important;
+  width: 0 !important;
+  border: 0 !important;
+}
+/* Remove reserved left padding when gutters are hidden */
+.bn-mantine .CodeMirror,
+.bn-mantine .cm-editor {
+  padding-left: 0 !important;
+}
+.bn-mantine .cm-scroller {
+  margin-left: 0 !important;
+}
+
+/* BlockNote list: remove indentation guide lines and bullets */
+.bn-mantine ul, .bn-mantine ol {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+.bn-mantine li::before, .bn-mantine li::after {
+  content: none !important;
+}
+.bn-mantine li {
+  position: relative;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* BlockNote container: unify background and radius with our editor box */
+.bn-mantine {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  font-size: 1.0625rem !important; /* ~17px for better readability */
+  line-height: 1.7 !important;
+}
+.bn-container, .bn-editor, .bn-editor * {
+  background-color: transparent !important;
+}
+
+/* Hide BlockNote list indentation guide lines without affecting content */
+.bn-mantine [class*="listItem-lines"],
+.bn-mantine [class*="list-lines"],
+.bn-mantine .bn-listItem::before,
+.bn-mantine .bn-listItem::after,
+.bn-mantine .bn-list::before,
+.bn-mantine .bn-list::after,
+.bn-mantine [data-list-item]::before,
+.bn-mantine [data-list-item]::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  border: 0 !important;
+}
+/* Fallback: strip any decorative borders/gradients on list containers */
+.bn-mantine ul, .bn-mantine ol, .bn-mantine li {
+  background-image: none !important;
+  border-left: 0 !important;
+}
+
+/* Scrollbar arrows hide; hover-only visibility; proper padding from rounded corner */
+/* Hide increment/decrement buttons (Chrome/Edge) */
+.bn-mantine *::-webkit-scrollbar-button,
+.bn-mantine::-webkit-scrollbar-button,
+.bn-mantine *::-webkit-scrollbar-button:single-button,
+.bn-mantine::-webkit-scrollbar-button:single-button,
+.document-list *::-webkit-scrollbar-button,
+.document-list::-webkit-scrollbar-button,
+.document-list *::-webkit-scrollbar-button:single-button,
+.document-list::-webkit-scrollbar-button:single-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+/* Show thumb on hover only; add end padding to avoid corner clash */
+.bn-mantine::-webkit-scrollbar-thumb,
+.bn-mantine *::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+  border: 2px solid transparent;
+}
+.bn-mantine:hover::-webkit-scrollbar-thumb,
+.bn-mantine *:hover::-webkit-scrollbar-thumb {
+  background: #a3a3a3;
+  border-color: #f5f5f5;
+}
+.dark .bn-mantine:hover::-webkit-scrollbar-thumb,
+.dark .bn-mantine *:hover::-webkit-scrollbar-thumb {
+  background: #525252;
+  border-color: #0a0a0a;
+}
+.bn-mantine::-webkit-scrollbar-corner,
+.bn-mantine *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.bn-mantine::-webkit-scrollbar,
+.bn-mantine *::-webkit-scrollbar {
+  width: 10px; /* constant width for smoothness */
+}
+.bn-mantine:hover::-webkit-scrollbar,
+.bn-mantine *:hover::-webkit-scrollbar {
+  width: 10px; /* keep width stable; only thumb color changes on hover */
+}
+/* Firefox */
+.bn-mantine {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin; /* Firefox: always thin for smoothness */
+  scrollbar-gutter: stable both-edges;
+}
+.bn-mantine:hover {
+  scrollbar-color: #d4d4d4 transparent;
+}
+.dark .bn-mantine:hover {
+  scrollbar-color: #404040 transparent;
+}
+
+/* Reserve gutter space for other scroll containers to avoid corner clash */
+.document-list, .document-list * {
+  scrollbar-gutter: stable both-edges;
+}
+/* Nudge scrollbars away from rounded corner visually */
+.bn-mantine,
+.document-list {
+  padding-inline-end: 6px;
 }
 
 /* Typography base styles for ReactMarkdown content - Force neutral colors */
