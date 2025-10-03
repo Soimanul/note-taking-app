@@ -146,6 +146,19 @@ const apiClient = {
     );
     if (!response.ok) throw new Error(`Failed to generate ${contentType}`);
     return response.json();
+  },
+
+  deleteDocument: async (user, docId) => {
+    const response = await apiClient.fetchWithTokenRefresh(
+      `/api/documents/${docId}/`,
+      {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user.access}` }
+      },
+      user
+    );
+    if (!response.ok) throw new Error('Failed to delete document');
+    return response;
   }
 };
 
@@ -160,6 +173,8 @@ const icons = {
   spinner: <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>,
   success: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
   fail: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
+  delete: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
+  trash: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
 };
 
 
@@ -307,7 +322,7 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch }) 
     );
 };
 
-const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload }) => {
+const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onDeleteDocument }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const fileInputRef = useRef(null);
 
@@ -322,11 +337,42 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload })
         }
     };
 
+    const handleDelete = (e, docId) => {
+        e.stopPropagation(); // Prevent selecting the document when clicking delete
+        if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+            onDeleteDocument(docId);
+        }
+    };
+
     const StatusIcon = ({ status }) => {
         switch (status) {
-            case 'processing': return <div className="text-gray-400" title="Processing...">{icons.spinner}</div>;
-            case 'completed': return <div className="text-green-500" title="Completed">{icons.success}</div>;
-            case 'failed': return <div className="text-red-500" title="Failed">{icons.fail}</div>;
+            case 'processing': 
+                return (
+                    <div className="text-blue-500" title="Processing...">
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                );
+            case 'completed': 
+                return (
+                    <div className="text-green-500" title="Completed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                );
+            case 'failed': 
+                return (
+                    <div className="text-red-500" title="Failed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                        </svg>
+                    </div>
+                );
             default: return null;
         }
     };
@@ -364,15 +410,41 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload })
                             <>
                                 <div className="flex justify-between items-start">
                                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex-1 pr-2 truncate">{getDisplayName(doc.filename)}</h3>
-                                   <StatusIcon status={doc.status} />
+                                   <div className="flex items-center space-x-1">
+                                       <StatusIcon status={doc.status} />
+                                       <button 
+                                           onClick={(e) => handleDelete(e, doc.id)}
+                                           className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+                                           title="Delete document"
+                                       >
+                                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                               <polyline points="3 6 5 6 21 6"></polyline>
+                                               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                               <line x1="10" y1="11" x2="10" y2="17"></line>
+                                               <line x1="14" y1="11" x2="14" y2="17"></line>
+                                           </svg>
+                                       </button>
+                                   </div>
                                 </div>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                    {new Date(doc.uploadDate).toLocaleDateString()}
                                 </p>
                             </>
                         ) : (
-                            <div className="flex justify-center">
+                            <div className="flex justify-center items-center space-x-1">
                                 <StatusIcon status={doc.status} />
+                                <button 
+                                    onClick={(e) => handleDelete(e, doc.id)}
+                                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
+                                    title="Delete document"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
                             </div>
                         )}
                     </button>
@@ -707,10 +779,25 @@ const App = () => {
   
   const handleUpload = async (file) => {
     try {
+        // Add optimistic UI update with processing status
+        const tempDoc = {
+            id: `temp-${Date.now()}`,
+            filename: file.name,
+            status: 'processing',
+            uploadDate: new Date().toISOString(),
+            generated_content: []
+        };
+        setDocuments(prevDocs => [tempDoc, ...prevDocs]);
+        
         const newDoc = await apiClient.uploadDocument(user, file);
-        setDocuments(prevDocs => [newDoc, ...prevDocs]);
+        // Replace temp doc with real doc from backend
+        setDocuments(prevDocs => prevDocs.map(doc => 
+            doc.id === tempDoc.id ? newDoc : doc
+        ));
     } catch (error) {
         console.error("Upload failed:", error);
+        // Remove temp doc on failure
+        setDocuments(prevDocs => prevDocs.filter(doc => doc.id !== `temp-${Date.now()}`));
         alert(error.message || "Upload failed. Please try again.");
     }
   };
@@ -729,6 +816,21 @@ const App = () => {
         return doc;
     });
     setDocuments(updateDocs);
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    try {
+        await apiClient.deleteDocument(user, docId);
+        // Remove document from state
+        setDocuments(prevDocs => prevDocs.filter(doc => doc.id !== docId));
+        // Clear active document if it was the deleted one
+        if (activeDocument?.id === docId) {
+            setActiveDocument(null);
+        }
+    } catch (error) {
+        console.error("Delete failed:", error);
+        alert(error.message || "Failed to delete document. Please try again.");
+    }
   };
   
   if (isLoadingApp) {
@@ -749,6 +851,7 @@ const App = () => {
                         activeDocument={activeDocument} 
                         onSelectDocument={setActiveDocument}
                         onUpload={handleUpload}
+                        onDeleteDocument={handleDeleteDocument}
                 />
                 <DocumentViewer
                         document={activeDocument} 

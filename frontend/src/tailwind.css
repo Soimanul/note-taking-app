@@ -7,9 +7,12 @@
       "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
+    --color-red-100: oklch(93.6% 0.032 17.717);
     --color-red-500: oklch(63.7% 0.237 25.331);
     --color-red-600: oklch(57.7% 0.245 27.325);
+    --color-red-900: oklch(39.6% 0.141 25.723);
     --color-green-500: oklch(72.3% 0.219 149.579);
+    --color-blue-500: oklch(62.3% 0.214 259.815);
     --color-gray-50: #fafafa;
     --color-gray-100: #f5f5f5;
     --color-gray-200: #e5e5e5;
@@ -814,6 +817,13 @@
       margin-block-end: calc(calc(var(--spacing) * 8) * calc(1 - var(--tw-space-y-reverse)));
     }
   }
+  .space-x-1 {
+    :where(& > :not(:last-child)) {
+      --tw-space-x-reverse: 0;
+      margin-inline-start: calc(calc(var(--spacing) * 1) * var(--tw-space-x-reverse));
+      margin-inline-end: calc(calc(var(--spacing) * 1) * calc(1 - var(--tw-space-x-reverse)));
+    }
+  }
   .space-x-2 {
     :where(& > :not(:last-child)) {
       --tw-space-x-reverse: 0;
@@ -1028,6 +1038,9 @@
   .whitespace-pre-wrap {
     white-space: pre-wrap;
   }
+  .text-blue-500 {
+    color: var(--color-blue-500);
+  }
   .text-gray-400 {
     color: var(--color-gray-400);
   }
@@ -1135,6 +1148,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-gray-700);
+      }
+    }
+  }
+  .hover\:bg-red-100 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-red-100);
       }
     }
   }
@@ -1291,6 +1311,15 @@
       &:hover {
         @media (hover: hover) {
           background-color: var(--color-gray-850);
+        }
+      }
+    }
+  }
+  .dark\:hover\:bg-red-900 {
+    &:where(.dark, .dark *) {
+      &:hover {
+        @media (hover: hover) {
+          background-color: var(--color-red-900);
         }
       }
     }
@@ -1544,15 +1573,12 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 6px;
-  }
-  *:hover::-webkit-scrollbar-thumb {
     background: #d4d4d4;
+    border-radius: 6px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  *:hover::-webkit-scrollbar-thumb:hover {
+  ::-webkit-scrollbar-thumb:hover {
     background: #a3a3a3;
     background-clip: padding-box;
   }
@@ -1560,25 +1586,19 @@
     background: transparent;
   }
   .dark ::-webkit-scrollbar-thumb {
-    background: transparent;
-  }
-  .dark *:hover::-webkit-scrollbar-thumb {
     background: #404040;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
-  .dark *:hover::-webkit-scrollbar-thumb:hover {
+  .dark ::-webkit-scrollbar-thumb:hover {
     background: #525252;
     background-clip: padding-box;
   }
   * {
     scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-  }
-  *:hover {
     scrollbar-color: #d4d4d4 transparent;
   }
-  .dark *:hover {
+  .dark * {
     scrollbar-color: #404040 transparent;
   }
   .dark {
@@ -1672,37 +1692,27 @@
   display: none;
 }
 .bn-mantine::-webkit-scrollbar-thumb, .bn-mantine *::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: #a3a3a3 !important;
   border-radius: 6px;
-  border: 2px solid transparent;
+  border: 2px solid #f5f5f5;
 }
-.bn-mantine:hover::-webkit-scrollbar-thumb, .bn-mantine *:hover::-webkit-scrollbar-thumb {
-  background: #a3a3a3;
-  border-color: #f5f5f5;
-}
-.dark .bn-mantine:hover::-webkit-scrollbar-thumb, .dark .bn-mantine *:hover::-webkit-scrollbar-thumb {
-  background: #525252;
+.dark .bn-mantine::-webkit-scrollbar-thumb, .dark .bn-mantine *::-webkit-scrollbar-thumb {
+  background: #525252 !important;
   border-color: #0a0a0a;
 }
 .bn-mantine::-webkit-scrollbar-corner, .bn-mantine *::-webkit-scrollbar-corner {
   background: transparent;
 }
 .bn-mantine::-webkit-scrollbar, .bn-mantine *::-webkit-scrollbar {
-  width: 10px;
-}
-.bn-mantine:hover::-webkit-scrollbar, .bn-mantine *:hover::-webkit-scrollbar {
-  width: 10px;
+  width: 12px !important;
 }
 .bn-mantine {
-  scrollbar-color: transparent transparent;
-  scrollbar-width: thin;
+  scrollbar-color: #d4d4d4 transparent !important;
+  scrollbar-width: thin !important;
   scrollbar-gutter: stable both-edges;
 }
-.bn-mantine:hover {
-  scrollbar-color: #d4d4d4 transparent;
-}
-.dark .bn-mantine:hover {
-  scrollbar-color: #404040 transparent;
+.dark .bn-mantine {
+  scrollbar-color: #404040 transparent !important;
 }
 .document-list, .document-list * {
   scrollbar-gutter: stable both-edges;

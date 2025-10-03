@@ -513,7 +513,7 @@
   border-left: 0 !important;
 }
 
-/* Scrollbar arrows hide; hover-only visibility; proper padding from rounded corner */
+/* Static scrollbars - always visible */
 /* Hide increment/decrement buttons (Chrome/Edge) */
 .bn-mantine *::-webkit-scrollbar-button,
 .bn-mantine::-webkit-scrollbar-button,
@@ -527,21 +527,16 @@
   height: 0;
   display: none;
 }
-/* Show thumb on hover only; add end padding to avoid corner clash */
+/* Static thumb - always visible */
 .bn-mantine::-webkit-scrollbar-thumb,
 .bn-mantine *::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: #a3a3a3 !important;
   border-radius: 6px;
-  border: 2px solid transparent;
+  border: 2px solid #f5f5f5;
 }
-.bn-mantine:hover::-webkit-scrollbar-thumb,
-.bn-mantine *:hover::-webkit-scrollbar-thumb {
-  background: #a3a3a3;
-  border-color: #f5f5f5;
-}
-.dark .bn-mantine:hover::-webkit-scrollbar-thumb,
-.dark .bn-mantine *:hover::-webkit-scrollbar-thumb {
-  background: #525252;
+.dark .bn-mantine::-webkit-scrollbar-thumb,
+.dark .bn-mantine *::-webkit-scrollbar-thumb {
+  background: #525252 !important;
   border-color: #0a0a0a;
 }
 .bn-mantine::-webkit-scrollbar-corner,
@@ -550,23 +545,16 @@
 }
 .bn-mantine::-webkit-scrollbar,
 .bn-mantine *::-webkit-scrollbar {
-  width: 10px; /* constant width for smoothness */
+  width: 12px !important; /* always visible width */
 }
-.bn-mantine:hover::-webkit-scrollbar,
-.bn-mantine *:hover::-webkit-scrollbar {
-  width: 10px; /* keep width stable; only thumb color changes on hover */
-}
-/* Firefox */
+/* Firefox - static scrollbars */
 .bn-mantine {
-  scrollbar-color: transparent transparent;
-  scrollbar-width: thin; /* Firefox: always thin for smoothness */
+  scrollbar-color: #d4d4d4 transparent !important;
+  scrollbar-width: thin !important;
   scrollbar-gutter: stable both-edges;
 }
-.bn-mantine:hover {
-  scrollbar-color: #d4d4d4 transparent;
-}
-.dark .bn-mantine:hover {
-  scrollbar-color: #404040 transparent;
+.dark .bn-mantine {
+  scrollbar-color: #404040 transparent !important;
 }
 
 /* Reserve gutter space for other scroll containers to avoid corner clash */
