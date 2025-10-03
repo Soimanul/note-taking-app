@@ -148,6 +148,28 @@ const apiClient = {
     return response.json();
   },
 
+  createNote: async (user, title = 'New Note') => {
+    // Create a minimal empty text file
+    const noteContent = ``; // Completely empty
+    const blob = new Blob([noteContent], { type: 'text/plain' });
+    const file = new File([blob], `${title}.txt`, { type: 'text/plain' });
+    
+    // Upload the file as a regular document
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.fetchWithTokenRefresh(
+      '/api/documents/',
+      {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${user.access}` },
+        body: formData,
+      },
+      user
+    );
+    if (!response.ok) throw new Error('Failed to create note');
+    return response.json();
+  },
+
   deleteDocument: async (user, docId) => {
     const response = await apiClient.fetchWithTokenRefresh(
       `/api/documents/${docId}/`,
@@ -352,13 +374,40 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
     );
 };
 
-const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onDeleteDocument, onRenameDocument }) => {
+const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onCreateNote, onDeleteDocument, onRenameDocument }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
     const [renamingDoc, setRenamingDoc] = useState(null);
     const [newName, setNewName] = useState('');
+    const [showNewNoteModal, setShowNewNoteModal] = useState(false);
+    const [modalAnimating, setModalAnimating] = useState(false);
+    const [noteName, setNoteName] = useState('New Note');
+    const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
+    const modalFileInputRef = useRef(null);
     const menuRef = useRef(null);
+    const newNoteButtonRef = useRef(null);
+    const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
+
+    // Effect to handle modal animation
+    useEffect(() => {
+        if (showNewNoteModal && !modalAnimating) {
+            // Capture button position
+            if (newNoteButtonRef.current) {
+                const rect = newNoteButtonRef.current.getBoundingClientRect();
+                setButtonPosition({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                });
+            }
+            // Start animation after modal mounts
+            const timer = setTimeout(() => setModalAnimating(true), 50);
+            return () => clearTimeout(timer);
+        }
+        if (!showNewNoteModal) {
+            setModalAnimating(false);
+        }
+    }, [showNewNoteModal, modalAnimating]);
 
     const handleUploadClick = () => {
         fileInputRef.current.click();
@@ -471,8 +520,14 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                 </div>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
                 {!isCollapsed && (
-                    <button onClick={handleUploadClick} className="w-full bg-gray-800 dark:bg-gray-700 text-white text-sm py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg mb-3">
-                        + Upload New
+                    <button 
+                        ref={newNoteButtonRef}
+                        id="new-note-button"
+                        onClick={() => setShowNewNoteModal(true)} 
+                        className="w-full text-sm px-3 py-2 rounded-lg bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-3"
+                    >
+                        <span className="text-lg font-bold" style={{lineHeight: 1}}>+</span>
+                        New Note
                     </button>
                 )}
             </div>
@@ -496,19 +551,19 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                                 className={`w-full p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'} overflow-hidden`}>
                                 {!isCollapsed ? (
                                     <>
-                                        <div className="flex justify-between items-start">
-                                           <div className="flex-1 min-w-0">
-                                               <div className="flex items-start gap-2">
-                                                   <StatusIcon status={doc.status} />
-                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate flex-1">{getDisplayName(doc.filename)}</h3>
+                                        <div className="flex justify-between items-center">
+                                           <div className="flex items-center gap-2 flex-1 min-w-0">
+                                               <StatusIcon status={doc.status} />
+                                               <div className="flex-1 min-w-0">
+                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{getDisplayName(doc.filename)}</h3>
+                                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                       {new Date(doc.uploadDate).toLocaleDateString()}
+                                                   </p>
                                                </div>
-                                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1" style={{marginLeft: '24px'}}>
-                                                   {new Date(doc.uploadDate).toLocaleDateString()}
-                                               </p>
                                            </div>
                                            <button 
                                                onClick={(e) => handleMenuToggle(e, doc.id)}
-                                               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center justify-center min-w-6 min-h-6 ml-2"
+                                               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center w-8 h-8 ml-3 hover:shadow-sm"
                                                title="More options"
                                            >
                                                {icons.threeDots}
@@ -550,6 +605,147 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                     </div>
                 ))}
       </div>
+      
+      {/* New Note Modal */}
+      {showNewNoteModal && (
+        <>
+          {/* Animated background blur overlay */}
+          <div 
+            className="fixed inset-0 z-40" 
+            style={{
+              backdropFilter: modalAnimating ? 'blur(8px)' : 'blur(0px)',
+              WebkitBackdropFilter: modalAnimating ? 'blur(8px)' : 'blur(0px)',
+              backgroundColor: modalAnimating ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0)',
+              transition: 'all 0.4s ease-out'
+            }}
+            onClick={() => {
+              setShowNewNoteModal(false);
+              setModalAnimating(false);
+            }}
+          />
+          <div 
+            className="fixed z-50 rounded-xl p-6 w-96 max-w-sm border border-white/20 dark:border-gray-300/20" 
+            style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: modalAnimating ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              left: modalAnimating ? '50%' : `${buttonPosition.x}px`,
+              top: modalAnimating ? '50%' : `${buttonPosition.y}px`,
+              transform: modalAnimating ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.1)',
+              transformOrigin: 'center center',
+              transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              opacity: modalAnimating ? 1 : 0
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Create New Note</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" style={{textShadow: '0 1px 1px rgba(0,0,0,0.2)'}}>Note Name</label>
+                <input
+                  type="text"
+                  value={noteName}
+                  onChange={(e) => setNoteName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 dark:text-white border-0"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)'
+                  }}
+                  placeholder="Enter note name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" style={{textShadow: '0 1px 1px rgba(0,0,0,0.2)'}}>Optional: Upload File for AI Processing</label>
+                <input
+                  type="file"
+                  ref={modalFileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setSelectedFile(file);
+                      // Auto-set name to filename without extension
+                      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+                      setNoteName(nameWithoutExt);
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-sm text-gray-900 dark:text-white border-0 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:text-green-700 hover:file:bg-green-100"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)'
+                  }}
+                />
+                <p className="text-xs text-gray-700 dark:text-gray-300 mt-1" style={{textShadow: '0 1px 1px rgba(0,0,0,0.1)'}}>
+                  {selectedFile ? 'File will be processed with AI for notes, summaries, and quizzes' : 'Leave empty to create a blank note for manual writing'}
+                </p>
+              </div>
+              
+              <div className="flex space-x-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowNewNoteModal(false);
+                    setModalAnimating(false);
+                    setNoteName('New Note');
+                    setSelectedFile(null);
+                    if (modalFileInputRef.current) modalFileInputRef.current.value = '';
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 rounded-lg transition-all border-0"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    textShadow: '0 1px 1px rgba(0,0,0,0.2)'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.25)'}
+                  onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      if (selectedFile) {
+                        // Upload file with custom name
+                        const renamedFile = new File([selectedFile], `${noteName}.${selectedFile.name.split('.').pop()}`, { type: selectedFile.type });
+                        await onUpload(renamedFile);
+                      } else {
+                        // Create empty note
+                        await onCreateNote(noteName);
+                      }
+                      setShowNewNoteModal(false);
+                      setModalAnimating(false);
+                      setNoteName('New Note');
+                      setSelectedFile(null);
+                      if (modalFileInputRef.current) modalFileInputRef.current.value = '';
+                    } catch (error) {
+                      console.error('Failed to create note:', error);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg transition-all border-0"
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = 'rgba(34, 197, 94, 0.9)'}
+                  onMouseLeave={(e) => e.target.style.background = 'rgba(34, 197, 94, 0.8)'}
+                >
+                  Create Note
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -1170,6 +1366,18 @@ const App = () => {
     setDocuments(updateDocs);
   };
 
+  const handleCreateNote = async (title = 'New Note') => {
+    try {
+        const newNote = await apiClient.createNote(user, title);
+        // Add the new note to documents and set it as active
+        setDocuments(prevDocs => [newNote, ...prevDocs]);
+        setActiveDocument(newNote);
+    } catch (error) {
+        console.error("Create note failed:", error);
+        alert(error.message || "Failed to create note. Please try again.");
+    }
+  };
+
   const handleDeleteDocument = async (docId) => {
     try {
         await apiClient.deleteDocument(user, docId);
@@ -1229,6 +1437,7 @@ const App = () => {
                         activeDocument={activeDocument} 
                         onSelectDocument={setActiveDocument}
                         onUpload={handleUpload}
+                        onCreateNote={handleCreateNote}
                         onDeleteDocument={handleDeleteDocument}
                         onRenameDocument={handleRenameDocument}
                 />
