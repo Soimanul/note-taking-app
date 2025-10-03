@@ -11,13 +11,15 @@ class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for the User model. Handles user registration with password hashing.
     """
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True, min_length=6)
     
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password']
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True, 'min_length': 6},
+            'email': {'required': True},
+            'username': {'required': True}
         }
     
     def create(self, validated_data):
@@ -25,9 +27,11 @@ class UserSerializer(serializers.ModelSerializer):
         Create a new user with encrypted password.
         """
         password = validated_data.pop('password')
-        user = User.objects.create_user(**validated_data)
-        user.set_password(password)
-        user.save()
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=password
+        )
         return user
 
 
