@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from .models import Document, GeneratedContent, Log
+
+User = get_user_model()
 
 # ==============================================================================
 #  1. User Serializer
@@ -15,21 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 # ==============================================================================
-#  2. Document Serializer
-# ==============================================================================
-class DocumentSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the Document model.
-    It will serialize all fields defined in the model.
-    """
-    class Meta:
-        model = Document
-        fields = '__all__'
-        read_only_fields = ['user', 'status'] # User and status are set by the server, not the client.
-
-
-# ==============================================================================
-#  3. GeneratedContent Serializer
+#  2. GeneratedContent Serializer
 # ==============================================================================
 class GeneratedContentSerializer(serializers.ModelSerializer):
     """
@@ -38,6 +26,22 @@ class GeneratedContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = GeneratedContent
         fields = '__all__'
+
+
+# ==============================================================================
+#  3. Document Serializer
+# ==============================================================================
+class DocumentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Document model.
+    It will serialize all fields defined in the model.
+    """
+    generated_content = GeneratedContentSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Document
+        fields = '__all__'
+        read_only_fields = ['user', 'status'] # User and status are set by the server, not the client.
 
 
 # ==============================================================================

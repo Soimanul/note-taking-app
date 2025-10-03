@@ -1,6 +1,8 @@
 import os
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, status
+
+User = get_user_model()
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -10,7 +12,7 @@ from django.db import models
 
 from .models import Document
 from .serializers import DocumentSerializer, UserSerializer
-from .tasks import process_document
+from .tasks import process_document, generate_summary_from_notes, generate_quiz_from_notes
 from . import services
 
 # ==============================================================================
@@ -172,3 +174,52 @@ class SemanticSearchView(APIView):
         # Serialize the docs and return them
         serializer = DocumentSerializer(documents, many=True)
         return Response(serializer.data)
+
+
+# ==============================================================================
+#  5. Content Generation View
+# ==============================================================================
+class GenerateContentView(APIView):
+    """
+    Handles on-demand content generation for documents.
+    """
+
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def post(self, request, pk):
+        content_type = request.data.get('type')
+        
+        if content_type not in ['summary', 'quiz']:
+            return Response(
+                {"detail": "Invalid content type. Must be 'summary' or 'quiz'."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            document = Document.objects.get(pk=pk, user=request.user)
+        except Document.DoesNotExist:
+            return Response(
+                {"detail": "Document not found."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if notes exist
+        from .models import GeneratedContent
+        try:
+            GeneratedContent.objects.get(document=document, contentType="notes")
+        except GeneratedContent.DoesNotExist:
+            return Response(
+                {"detail": "Document notes must be generated first."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Trigger the appropriate Celery task
+        if content_type == 'summary':
+            generate_summary_from_notes.delay(str(document.id))
+        elif content_type == 'quiz':
+            generate_quiz_from_notes.delay(str(document.id))
+
+        return Response(
+            {"detail": f"{content_type.capitalize()} generation started."}, 
+            status=status.HTTP_202_ACCEPTED
+        )

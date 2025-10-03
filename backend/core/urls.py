@@ -6,6 +6,7 @@ urlpatterns = [
     path('register/', views.UserCreate.as_view(), name='user-register'),
     path('documents/', views.DocumentListCreate.as_view(), name='document-list-create'),
     path('documents/<uuid:pk>/', views.DocumentRetrieveUpdateDestroy.as_view(), name='document-detail'),
+    path('documents/<uuid:pk>/generate/', views.GenerateContentView.as_view(), name='document-generate-content'),
     path('search/', views.SemanticSearchView.as_view(), name='document-search'),
 
 ]
