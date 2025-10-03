@@ -1,8 +1,59 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-// --- API Client ---
+// --- API Client with Token Refresh ---
 const apiClient = {
+  // Store refresh callback
+  _onTokenRefresh: null,
+  _onLogout: null,
+  
+  setTokenRefreshCallback: (callback) => {
+    apiClient._onTokenRefresh = callback;
+  },
+  
+  setLogoutCallback: (callback) => {
+    apiClient._onLogout = callback;
+  },
+  
+  refreshToken: async (refreshToken) => {
+    const response = await fetch('/api/token/refresh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+    return response.json();
+  },
+  
+  // Wrapper to handle token refresh automatically
+  fetchWithTokenRefresh: async (url, options, user) => {
+    let response = await fetch(url, options);
+    
+    // If unauthorized and we have a refresh token, try to refresh
+    if (response.status === 401 && user?.refresh) {
+      try {
+        const { access } = await apiClient.refreshToken(user.refresh);
+        // Update token via callback
+        if (apiClient._onTokenRefresh) {
+          apiClient._onTokenRefresh(access);
+        }
+        // Retry request with new token
+        const newHeaders = { ...options.headers, 'Authorization': `Bearer ${access}` };
+        response = await fetch(url, { ...options, headers: newHeaders });
+      } catch (err) {
+        // Refresh failed, logout user
+        if (apiClient._onLogout) {
+          apiClient._onLogout();
+        }
+        throw new Error('Session expired. Please login again.');
+      }
+    }
+    
+    return response;
+  },
+  
   login: async (username, password) => {
     const response = await fetch('/api/token/', {
       method: 'POST',
@@ -15,6 +66,7 @@ const apiClient = {
     }
     return response.json();
   },
+  
   signup: async (username, password, email) => {
     const response = await fetch('/api/register/', {
         method: 'POST',
@@ -27,47 +79,66 @@ const apiClient = {
     }
     return response.json();
   },
-  getDocuments: async (token) => {
-    const response = await fetch('/api/documents/', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+  
+  getDocuments: async (user) => {
+    const response = await apiClient.fetchWithTokenRefresh(
+      '/api/documents/',
+      { headers: { 'Authorization': `Bearer ${user.access}` } },
+      user
+    );
     if (!response.ok) throw new Error('Failed to fetch documents');
     return response.json();
   },
-  getDocumentDetails: async (token, docId) => {
-     const response = await fetch(`/api/documents/${docId}/`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+  
+  getDocumentDetails: async (user, docId) => {
+    const response = await apiClient.fetchWithTokenRefresh(
+      `/api/documents/${docId}/`,
+      { headers: { 'Authorization': `Bearer ${user.access}` } },
+      user
+    );
     if (!response.ok) throw new Error('Failed to fetch document details');
     return response.json();
   },
-  uploadDocument: async (token, file) => {
+  
+  uploadDocument: async (user, file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await fetch('/api/documents/', {
+    const response = await apiClient.fetchWithTokenRefresh(
+      '/api/documents/',
+      {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 'Authorization': `Bearer ${user.access}` },
         body: formData,
-    });
+      },
+      user
+    );
     if (!response.ok) throw new Error('File upload failed');
     return response.json();
   },
-  searchDocuments: async (token, query) => {
-    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-    });
+  
+  searchDocuments: async (user, query) => {
+    const response = await apiClient.fetchWithTokenRefresh(
+      `/api/search/?q=${encodeURIComponent(query)}`,
+      { headers: { 'Authorization': `Bearer ${user.access}` } },
+      user
+    );
     if (!response.ok) throw new Error('Search failed');
     return response.json();
   },
-  generateContent: async (token, docId, contentType) => {
-    const response = await fetch(`/api/documents/${docId}/generate/`, {
+  
+  generateContent: async (user, docId, contentType) => {
+    const response = await apiClient.fetchWithTokenRefresh(
+      `/api/documents/${docId}/generate/`,
+      {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ type: contentType })
-    });
+      },
+      user
+    );
     if (!response.ok) throw new Error(`Failed to generate ${contentType}`);
     return response.json();
   }
@@ -75,19 +146,93 @@ const apiClient = {
 
 // --- SVG Icons ---
 const icons = {
-  documents: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
-  settings: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
-  profile: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+  documents: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+  settings: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+  profile: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
   search: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   sun: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>,
   moon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>,
   spinner: <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>,
-  success: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>,
+  success: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
   fail: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
 };
 
 
 // --- React Components ---
+
+// Notion-style line editor component
+const NotionLine = ({ content, index, onChange, onKeyDown, onFocus }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [rawContent, setRawContent] = useState(content);
+  
+  useEffect(() => {
+    setRawContent(content);
+  }, [content]);
+  
+  const renderMarkdown = (text) => {
+    // Handle headings
+    if (text.startsWith('# ')) return <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{text.slice(2)}</h1>;
+    if (text.startsWith('## ')) return <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{text.slice(3)}</h2>;
+    if (text.startsWith('### ')) return <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{text.slice(4)}</h3>;
+    
+    // Handle bold, italic
+    let rendered = text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/__(.+?)__/g, '<strong>$1</strong>')
+      .replace(/_(.+?)_/g, '<em>$1</em>');
+    
+    // Handle lists
+    if (text.startsWith('- ') || text.startsWith('* ')) {
+      return <li className="ml-4 text-gray-800 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: rendered.slice(2) }} />;
+    }
+    if (/^\d+\.\s/.test(text)) {
+      const match = text.match(/^\d+\.\s(.+)/);
+      return <li className="ml-4 text-gray-800 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: match ? match[1] : text }} />;
+    }
+    
+    // Handle code blocks
+    if (text.startsWith('```')) {
+      return <code className="block bg-gray-200 dark:bg-gray-800 p-2 rounded text-sm font-mono text-gray-900 dark:text-gray-100">{text.slice(3)}</code>;
+    }
+    
+    // Default paragraph
+    return <p className="text-gray-800 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: rendered || '<br/>' }} />;
+  };
+  
+  const handleBlur = () => {
+    setIsEditing(false);
+    onChange(index, rawContent);
+  };
+  
+  const handleChange = (e) => {
+    setRawContent(e.target.value);
+  };
+  
+  if (isEditing) {
+    return (
+      <input
+        type="text"
+        value={rawContent}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        onKeyDown={(e) => onKeyDown(e, index)}
+        onFocus={onFocus}
+        autoFocus
+        className="w-full outline-none bg-transparent text-gray-900 dark:text-gray-100 py-1 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded"
+      />
+    );
+  }
+  
+  return (
+    <div 
+      onClick={() => setIsEditing(true)}
+      className="py-1 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded cursor-text transition-colors min-h-[28px]"
+    >
+      {renderMarkdown(rawContent)}
+    </div>
+  );
+};
 
 const LoginPage = ({ onLogin }) => {
   const [username, setUsername] = useState('');
@@ -119,20 +264,20 @@ const LoginPage = ({ onLogin }) => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-850 rounded-xl shadow-lg border border-gray-200 dark:border-gray-950">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-850 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-gray-100">
             {isSigningUp ? 'Create an Account' : 'Sign in'}
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <div className="space-y-4">
-            <input id="username" name="username" type="text" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 text-gray-900 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <input id="username" name="username" type="text" required className="appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 text-sm text-gray-900 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-gray-500 focus:border-gray-500" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
             {isSigningUp && (
-              <input id="email" name="email" type="email" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 text-gray-900 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input id="email" name="email" type="email" required className="appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 text-sm text-gray-900 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-gray-500 focus:border-gray-500" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
             )}
-            <input id="password" name="password" type="password" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 dark:border-gray-700 placeholder-gray-500 text-gray-900 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input id="password" name="password" type="password" required className="appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 placeholder-gray-500 text-sm text-gray-900 dark:text-gray-200 bg-gray-50 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-gray-500 focus:border-gray-500" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
            <div className="flex items-center justify-between pt-2">
             {!isSigningUp && (
@@ -148,7 +293,7 @@ const LoginPage = ({ onLogin }) => {
             </div>
           </div>
           <div className="pt-4">
-            <button type="submit" disabled={isLoading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-800 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 transition-colors">
+            <button type="submit" disabled={isLoading} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-800 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 transition-colors shadow-md hover:shadow-lg">
               {isLoading ? 'Processing...' : (isSigningUp ? 'Sign up' : 'Sign in')}
             </button>
           </div>
@@ -159,20 +304,34 @@ const LoginPage = ({ onLogin }) => {
 };
 
 const Sidebar = ({ activePage, setActivePage }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const navItems = [
         { name: 'Documents', icon: icons.documents },
         { name: 'Settings', icon: icons.settings },
         { name: 'Profile', icon: icons.profile },
     ];
   return (
-        <aside className="w-64 flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-950 p-4 flex flex-col">
-            <div className="font-bold text-xl mb-8 text-gray-900 dark:text-gray-100 pl-3">Synapse</div>
+        <aside className={`${isCollapsed ? 'w-16' : 'w-52'} flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col shadow-sm transition-all duration-300`}>
+            <div className="flex items-center justify-between mb-6">
+                {!isCollapsed && <div className="font-bold text-2xl text-gray-900 dark:text-gray-100 pl-3">Synapse</div>}
+                <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors ml-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
             <nav className="flex flex-col space-y-2">
                 {navItems.map(item => (
-                    <button key={item.name} onClick={() => setActivePage(item.name)} 
-                        className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${activePage === item.name ? 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-850'}`}>
+                    <button 
+                        key={item.name} 
+                        onClick={() => setActivePage(item.name)} 
+                        className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-sm transition-colors ${activePage === item.name ? 'bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-850'}`}
+                        title={isCollapsed ? item.name : ''}
+                    >
                         {item.icon}
-                        <span>{item.name}</span>
+                        {!isCollapsed && <span>{item.name}</span>}
             </button>
           ))}
         </nav>
@@ -190,7 +349,7 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch }) 
     };
 
   return (
-        <header className="flex-shrink-0 h-16 flex items-center justify-between px-6 border-b border-gray-300 dark:border-gray-950 bg-white dark:bg-gray-850">
+        <header className="flex-shrink-0 h-16 flex items-center justify-between px-6 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-850 shadow-sm">
             <div className="flex-1 max-w-lg mx-auto">
           <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
@@ -209,13 +368,14 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch }) 
                     {isDarkMode ? icons.sun : icons.moon}
           </button>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{username}</span>
-                <button onClick={onLogout} className="text-sm px-3 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors">Logout</button>
+                <button onClick={onLogout} className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors">Logout</button>
         </div>
         </header>
     );
 };
 
 const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload }) => {
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const fileInputRef = useRef(null);
 
     const handleUploadClick = () => {
@@ -237,26 +397,51 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload })
             default: return null;
         }
     };
+    
+    const getDisplayName = (filename) => {
+        // Remove file extension from display
+        return filename.replace(/\.(txt|md|pdf|docx)$/i, '');
+    };
 
   return (
-        <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-gray-950 overflow-y-auto bg-white dark:bg-gray-850">
-      <div className="p-4">
+        <div className={`${isCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-850 shadow-sm transition-all duration-300`}>
+      <div className="p-3">
+                <div className="flex items-center justify-between mb-3">
+                    {!isCollapsed && <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2">Documents</span>}
+                    <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors ml-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                <button onClick={handleUploadClick} className="w-full bg-gray-800 dark:bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
-                    + Upload New
-        </button>
+                {!isCollapsed && (
+                    <button onClick={handleUploadClick} className="w-full bg-gray-800 dark:bg-gray-700 text-white text-sm py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg mb-3">
+                        + Upload New
+                    </button>
+                )}
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col px-2 space-y-1">
                 {documents.map(doc => (
                     <button key={doc.id} onClick={() => onSelectDocument(doc)}
-                        className={`p-4 text-left border-l-4 transition-colors ${activeDocument?.id === doc.id ? 'bg-gray-100 dark:bg-gray-800 border-gray-800 dark:border-gray-500' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-850'}`}>
-                        <div className="flex justify-between items-start">
-                           <h3 className="font-semibold text-gray-900 dark:text-gray-100 flex-1 pr-2">{doc.filename}</h3>
-                           <StatusIcon status={doc.status} />
-              </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                           {new Date(doc.uploadDate).toLocaleDateString()}
-                        </p>
+                        className={`p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'}`}>
+                        {!isCollapsed ? (
+                            <>
+                                <div className="flex justify-between items-start">
+                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex-1 pr-2 truncate">{getDisplayName(doc.filename)}</h3>
+                                   <StatusIcon status={doc.status} />
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                   {new Date(doc.uploadDate).toLocaleDateString()}
+                                </p>
+                            </>
+                        ) : (
+                            <div className="flex justify-center">
+                                <StatusIcon status={doc.status} />
+                            </div>
+                        )}
                     </button>
                 ))}
       </div>
@@ -269,6 +454,7 @@ const DocumentViewer = ({ document, user, onContentGenerated }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [originalContent, setOriginalContent] = useState('');
+    const [lines, setLines] = useState([]);
     
     // The active document now holds its own generated content
     const generatedContent = document?.generated_content || [];
@@ -278,19 +464,49 @@ const DocumentViewer = ({ document, user, onContentGenerated }) => {
             setActiveTab('Notes');
             // Reset original content when document changes
             setOriginalContent('');
+            // Initialize lines from markdown
+            const notes = generatedContent.find(c => c.contentType === 'notes');
+            if (notes) {
+                const markdownLines = notes.contentData.markdown_text.split('\n');
+                setLines(markdownLines);
+            }
         }
-    }, [document]);
+    }, [document, generatedContent]);
     
     const handleGenerate = async (contentType) => {
         setIsLoading(true);
         setError('');
         try {
-            const newContent = await apiClient.generateContent(user.access, document.id, contentType);
+            const newContent = await apiClient.generateContent(user, document.id, contentType);
             onContentGenerated(document.id, newContent);
         } catch (err) {
             setError(`Failed to generate ${contentType}.`);
         } finally {
             setIsLoading(false);
+        }
+    };
+    
+    const handleLineChange = (index, newContent) => {
+        const newLines = [...lines];
+        newLines[index] = newContent;
+        setLines(newLines);
+        // In a real app, debounce and save to backend
+        console.log('Line updated:', index, newContent);
+    };
+    
+    const handleKeyDown = (e, index) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Add new line below
+            const newLines = [...lines];
+            newLines.splice(index + 1, 0, '');
+            setLines(newLines);
+            // Focus will be handled by the new line's autoFocus
+        } else if (e.key === 'Backspace' && lines[index] === '' && lines.length > 1) {
+            e.preventDefault();
+            // Remove empty line
+            const newLines = lines.filter((_, i) => i !== index);
+            setLines(newLines);
         }
     };
 
@@ -327,21 +543,42 @@ const DocumentViewer = ({ document, user, onContentGenerated }) => {
         
         switch(activeTab) {
             case 'Notes':
-                return notes ? 
-                    <div className="prose max-w-none">
-                        <ReactMarkdown>{notes.contentData.markdown_text}</ReactMarkdown>
-                    </div> : 
-                    <p className="text-gray-500 text-center">Initial notes are being generated or have failed.</p>;
+                if (!notes && lines.length === 0) {
+                    return <p className="text-gray-500 text-center">Initial notes are being generated or have failed.</p>;
+                }
+                
+                return (
+                    <div className="space-y-1">
+                        {lines.map((line, index) => (
+                            <NotionLine
+                                key={index}
+                                content={line}
+                                index={index}
+                                onChange={handleLineChange}
+                                onKeyDown={handleKeyDown}
+                                onFocus={() => {}}
+                            />
+                        ))}
+                        {lines.length === 0 && (
+                            <div 
+                                onClick={() => setLines([''])}
+                                className="py-1 px-2 text-gray-400 dark:text-gray-500 cursor-text"
+                            >
+                                Click to start writing...
+                            </div>
+                        )}
+                    </div>
+                );
             case 'Summary':
                 return summary ? 
                     <div className="prose max-w-none">
                         <ReactMarkdown>{summary.contentData.markdown_text}</ReactMarkdown>
                     </div> : 
-                    <div className="text-center p-8"><button onClick={() => handleGenerate('summary')} className="bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">Generate Summary</button></div>;
+                    <div className="text-center p-6"><button onClick={() => handleGenerate('summary')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">Generate Summary</button></div>;
             case 'Quiz':
                  return quiz ?
                     <p className="text-center text-gray-600 dark:text-gray-400">Quiz display not implemented yet.</p> :
-                    <div className="text-center p-8"><button onClick={() => handleGenerate('quiz')} className="bg-gray-800 dark:bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors">Generate Quiz</button></div>;
+                    <div className="text-center p-6"><button onClick={() => handleGenerate('quiz')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">Generate Quiz</button></div>;
             case 'Original':
                 return <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-300">{originalContent || "Click button to load original content."}</pre>;
       default:
@@ -349,22 +586,26 @@ const DocumentViewer = ({ document, user, onContentGenerated }) => {
     }
   };
 
+  const getDisplayName = (filename) => {
+    return filename.replace(/\.(txt|md|pdf|docx)$/i, '');
+  };
+
   return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-850">
-            <div className="flex-shrink-0 px-8 pt-6 border-b border-gray-200 dark:border-gray-950 pb-4">
+        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-850 min-w-0">
+            <div className="flex-shrink-0 px-6 pt-4 border-b border-gray-200 dark:border-gray-700 pb-3">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{document.filename}</h2>
-                    <div className="flex items-center space-x-2 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate mr-4">{getDisplayName(document.filename)}</h2>
+                    <div className="flex items-center space-x-2 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 shadow-sm flex-shrink-0">
                         {tabs.map(tab => (
                             <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={`px-3 py-1 text-sm font-semibold rounded-md transition-colors ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
                                 {tab}
             </button>
           ))}
         </div>
       </div>
             </div>
-            <div className="flex-1 p-8 overflow-y-auto">
+            <div className="flex-1 p-6 overflow-y-auto overflow-x-hidden text-sm min-h-0">
         {renderContent()}
       </div>
     </div>
@@ -373,10 +614,10 @@ const DocumentViewer = ({ document, user, onContentGenerated }) => {
 
 const SettingsPage = ({ isDarkMode, onToggleDarkMode }) => {
   return (
-        <div className="p-8">
-            <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Settings</h1>
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <span className="font-medium text-gray-900 dark:text-gray-100">Dark Mode</span>
+        <div className="p-6">
+            <h1 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Settings</h1>
+            <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
+                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Dark Mode</span>
                 <button onClick={onToggleDarkMode} className={`w-14 h-8 rounded-full flex items-center transition-colors p-1 ${isDarkMode ? 'bg-gray-700 justify-end' : 'bg-gray-300 justify-start'}`}>
                     <span className="w-6 h-6 bg-white rounded-full shadow-md transform transition-transform"></span>
               </button>
@@ -387,11 +628,11 @@ const SettingsPage = ({ isDarkMode, onToggleDarkMode }) => {
 
 const ProfilePage = ({ username, onLogout }) => {
   return (
-        <div className="p-8">
-            <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Profile</h1>
-             <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-900 dark:text-gray-100">Username: <span className="font-semibold">{username}</span></p>
-                <button onClick={onLogout} className="mt-6 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</button>
+        <div className="p-6">
+            <h1 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Profile</h1>
+             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                <p className="text-sm text-gray-900 dark:text-gray-100">Username: <span className="font-semibold">{username}</span></p>
+                <button onClick={onLogout} className="mt-4 bg-red-500 text-white text-sm px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-md hover:shadow-lg">Logout</button>
       </div>
     </div>
   );
@@ -407,9 +648,38 @@ const App = () => {
   // eslint-disable-next-line no-unused-vars
   const [appError, setAppError] = useState('');
 
-  const fetchDocuments = useCallback((token) => {
+  // Token refresh handler
+  const handleTokenRefresh = useCallback((newAccessToken) => {
+    setUser(prevUser => {
+      if (!prevUser) return prevUser;
+      const updatedUser = { ...prevUser, access: newAccessToken };
+      // Update localStorage if remember me was enabled
+      const sessionUser = localStorage.getItem('userSession');
+      if (sessionUser) {
+        localStorage.setItem('userSession', JSON.stringify(updatedUser));
+      }
+      return updatedUser;
+    });
+  }, []);
+
+  // Logout handler
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('userSession');
+    setUser(null);
+    setDocuments([]);
+    setActiveDocument(null);
+  }, []);
+
+  // Set up API callbacks
+  useEffect(() => {
+    apiClient.setTokenRefreshCallback(handleTokenRefresh);
+    apiClient.setLogoutCallback(handleLogout);
+  }, [handleTokenRefresh, handleLogout]);
+
+  const fetchDocuments = useCallback((currentUser) => {
+    if (!currentUser) return;
     setAppError('');
-    apiClient.getDocuments(token)
+    apiClient.getDocuments(currentUser)
       .then(docs => {
         setDocuments(docs);
         // If there's an active document, update its data in the list
@@ -424,9 +694,6 @@ const App = () => {
       .catch(err => {
         console.error(err);
         setAppError('Failed to load documents.');
-        if (err.message.includes("401")) { 
-            handleLogout();
-        }
       });
   }, []); // No dependencies - use functional updates instead
 
@@ -437,7 +704,7 @@ const App = () => {
     const processingDocs = documents.some(doc => doc.status === 'processing');
     if (!processingDocs) return;
 
-    const interval = setInterval(() => fetchDocuments(user.access), 5000); 
+    const interval = setInterval(() => fetchDocuments(user), 5000); 
 
     return () => clearInterval(interval);
   }, [documents, user, activePage, fetchDocuments]);
@@ -454,8 +721,8 @@ const App = () => {
   }, []);
   
   useEffect(() => {
-    if (user?.access) {
-      fetchDocuments(user.access);
+    if (user) {
+      fetchDocuments(user);
     }
   }, [user, fetchDocuments]);
   
@@ -475,21 +742,14 @@ const App = () => {
     }
     setUser(userData);
   };
-
-  const handleLogout = () => {
-      localStorage.removeItem('userSession');
-    setUser(null);
-      setDocuments([]);
-      setActiveDocument(null);
-  };
   
   const handleUpload = async (file) => {
     try {
-        const newDoc = await apiClient.uploadDocument(user.access, file);
+        const newDoc = await apiClient.uploadDocument(user, file);
         setDocuments(prevDocs => [newDoc, ...prevDocs]);
     } catch (error) {
         console.error("Upload failed:", error);
-        alert("Upload failed. Please try again.");
+        alert(error.message || "Upload failed. Please try again.");
     }
   };
 
@@ -521,7 +781,7 @@ const App = () => {
       switch(activePage) {
           case 'Documents':
   return (
-                  <div className="flex h-full bg-white dark:bg-gray-850">
+                  <div className="flex h-full bg-white dark:bg-gray-850 overflow-hidden">
                 <DocumentList
                   documents={documents}
                         activeDocument={activeDocument} 
@@ -545,18 +805,18 @@ const App = () => {
   };
 
   return (
-    <div className={`flex h-screen font-sans text-gray-900 bg-gray-100 dark:bg-gray-950 transition-colors`}>
+    <div className={`flex h-screen w-screen font-sans text-gray-900 bg-gray-100 dark:bg-gray-950 transition-colors overflow-hidden`}>
         <Sidebar activePage={activePage} setActivePage={setActivePage} />
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <Header 
                 username={user.username} 
                 onLogout={handleLogout}
                 isDarkMode={isDarkMode}
                 onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-                onSearch={(query) => apiClient.searchDocuments(user.access, query).then(setDocuments)}
+                onSearch={(query) => apiClient.searchDocuments(user, query).then(setDocuments)}
               />
-            <div className="flex-1 overflow-hidden p-4 bg-gray-50 dark:bg-gray-950">
-                <div className="h-full w-full bg-white dark:bg-gray-850 rounded-xl shadow-sm border border-gray-200 dark:border-gray-950 overflow-hidden">
+            <div className="flex-1 overflow-hidden p-4 bg-gray-50 dark:bg-gray-950 min-h-0">
+                <div className="h-full w-full bg-white dark:bg-gray-850 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {renderMainContent()}
           </div>
         </div>

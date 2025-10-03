@@ -27,6 +27,43 @@
     @apply bg-gray-950 text-gray-100;
   }
   
+  /* Consistent shadows for floating effect in both modes */
+  .shadow-float {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  .dark .shadow-float {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  }
+  .shadow-float-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  .dark .shadow-float-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  }
+  
+  /* Make all buttons and UI text unselectable */
+  button, .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  
+  /* Hide scrollbars but keep functionality */
+  * {
+    scrollbar-width: thin;
+  }
+  
+  /* Ensure body doesn't overflow */
+  body {
+    overflow: hidden;
+  }
+  
+  #root {
+    height: 100vh;
+    overflow: hidden;
+  }
+  
   /* Custom scrollbar styles - Light mode */
   ::-webkit-scrollbar {
     width: 12px;
@@ -84,6 +121,8 @@
     --color-gray-850: #1a1a1a;
     --color-gray-900: #171717;
     --color-gray-950: #0a0a0a;
+    /* Border color for dark mode - visible light gray */
+    --color-border: #2a2a2a;
   }
 }
 
