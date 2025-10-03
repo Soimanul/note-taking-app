@@ -643,3 +643,50 @@
 .dark .prose ol {
   color: #d4d4d4;
 }
+
+/* Custom text selection styling for BlockNote editors */
+/* Light gray selection with rounded corners */
+.bn-container *::selection,
+.bn-mantine *::selection,
+.bn-editor *::selection {
+  background-color: #d4d4d4 !important; /* Light gray */
+  color: #262626 !important;
+  border-radius: 4px !important;
+}
+
+/* Dark mode selection */
+.dark .bn-container *::selection,
+.dark .bn-mantine *::selection,
+.dark .bn-editor *::selection {
+  background-color: #525252 !important; /* Darker gray for dark mode */
+  color: #f5f5f5 !important;
+  border-radius: 4px !important;
+}
+
+/* Mozilla Firefox selection */
+.bn-container *::-moz-selection,
+.bn-mantine *::-moz-selection,
+.bn-editor *::-moz-selection {
+  background-color: #d4d4d4 !important;
+  color: #262626 !important;
+  border-radius: 4px !important;
+}
+
+.dark .bn-container *::-moz-selection,
+.dark .bn-mantine *::-moz-selection,
+.dark .bn-editor *::-moz-selection {
+  background-color: #525252 !important;
+  color: #f5f5f5 !important;
+  border-radius: 4px !important;
+}
+
+/* Enable delete key functionality for selected text */
+.bn-container,
+.bn-mantine,
+.bn-editor {
+  /* Ensure delete key works on selections */
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}

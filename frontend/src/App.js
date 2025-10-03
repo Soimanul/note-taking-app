@@ -4,6 +4,75 @@ import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
 import "@mantine/core/styles.css";
 import "@blocknote/mantine/style.css";
+import "./index.css";
+
+// --- Custom Selection Styles ---
+const customStyles = `
+  /* Make UI text elements unselectable */
+  .no-select,
+  button,
+  .sidebar-item,
+  .tab-button,
+  .document-title,
+  .search-label,
+  .header-text,
+  h1, h2, h3, h4, h5, h6:not(.bn-editor h1, .bn-editor h2, .bn-editor h3, .bn-editor h4, .bn-editor h5, .bn-editor h6),
+  label:not(.bn-editor label),
+  .sticky-header,
+  .sidebar-text {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* BlockNote editor custom selection - minimal interference approach */
+  .bn-editor .ProseMirror-selectednode {
+    background-color: #d4d4d4 !important;
+  }
+
+  .dark .bn-editor .ProseMirror-selectednode {
+    background-color: #525252 !important;
+  }
+
+  /* Text selection in BlockNote - let ProseMirror handle it naturally */
+  .bn-editor .ProseMirror {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+  }
+
+  /* Override default browser selection only for BlockNote content */
+  .bn-editor .ProseMirror *::selection {
+    background-color: #d4d4d4;
+    color: inherit;
+  }
+
+  .dark .bn-editor .ProseMirror *::selection {
+    background-color: #525252;
+    color: inherit;
+  }
+
+  .bn-editor .ProseMirror *::-moz-selection {
+    background-color: #d4d4d4;
+    color: inherit;
+  }
+
+  .dark .bn-editor .ProseMirror *::-moz-selection {
+    background-color: #525252;
+    color: inherit;
+  }
+
+  /* Ensure BlockNote maintains its native deletion behavior */
+  .bn-editor {
+    outline: none;
+  }
+
+  /* Make sure selection handles work properly */
+  .bn-editor .ProseMirror-gapcursor {
+    pointer-events: none;
+  }
+`;
 
 // --- API Client with Token Refresh ---
 const apiClient = {
@@ -387,40 +456,20 @@ className="w-full pl-12 pr-4 py-1.5 rounded-xl neu-inset
     );
 };
 
-const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onCreateNote, onDeleteDocument, onRenameDocument }) => {
+const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onCreateNote, onDeleteDocument, onRenameDocument, isDarkMode }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
     const [renamingDoc, setRenamingDoc] = useState(null);
     const [newName, setNewName] = useState('');
     const [showNewNoteModal, setShowNewNoteModal] = useState(false);
-    const [modalAnimating, setModalAnimating] = useState(false);
     const [noteName, setNoteName] = useState('New Note');
     const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
     const modalFileInputRef = useRef(null);
     const menuRef = useRef(null);
     const newNoteButtonRef = useRef(null);
-    const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0 });
 
-    // Effect to handle modal animation
-    useEffect(() => {
-        if (showNewNoteModal && !modalAnimating) {
-            // Capture button position
-            if (newNoteButtonRef.current) {
-                const rect = newNoteButtonRef.current.getBoundingClientRect();
-                setButtonPosition({
-                    x: rect.left + rect.width / 2,
-                    y: rect.top + rect.height / 2
-                });
-            }
-            // Start animation after modal mounts
-            const timer = setTimeout(() => setModalAnimating(true), 50);
-            return () => clearTimeout(timer);
-        }
-        if (!showNewNoteModal) {
-            setModalAnimating(false);
-        }
-    }, [showNewNoteModal, modalAnimating]);
+
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -536,8 +585,8 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                             onClick={() => setShowNewNoteModal(true)} 
                             className="w-full text-sm px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-3 font-medium"
                         >
-                            <span className="text-lg font-bold" style={{lineHeight: 1}}>+</span>
-                            New Note
+                            <span className="text-lg font-bold no-select" style={{lineHeight: 1}}>+</span>
+                            <span className="no-select">New Note</span>
                         </button>
                     )}
                 </div>
@@ -576,7 +625,7 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                                            <div className="flex items-center gap-2 flex-1 min-w-0">
                                                <StatusIcon status={doc.status} />
                                                <div className="flex-1 min-w-0">
-                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{getDisplayName(doc.filename)}</h3>
+                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate no-select">{getDisplayName(doc.filename)}</h3>
                                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                                        {new Date(doc.uploadDate).toLocaleDateString()}
                                                    </p>
@@ -627,58 +676,61 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
             {/* New Note Modal */}
             {showNewNoteModal && (
         <>
-          {/* Animated background blur overlay */}
+          {/* Blurred background overlay */}
           <div 
             className="fixed inset-0 z-40" 
             style={{
-              backdropFilter: modalAnimating ? 'blur(8px)' : 'blur(0px)',
-              WebkitBackdropFilter: modalAnimating ? 'blur(8px)' : 'blur(0px)',
-              backgroundColor: modalAnimating ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0)',
-              transition: 'all 0.4s ease-out'
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)'
             }}
-            onClick={() => {
-              setShowNewNoteModal(false);
-              setModalAnimating(false);
-            }}
+            onClick={() => setShowNewNoteModal(false)}
           />
+          
+          {/* Simple centered box */}
           <div 
-            className={`fixed z-50 rounded-xl p-6 w-96 max-w-sm neu-container ${modalAnimating ? 'neu-raised' : ''}`}
+            className="fixed z-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6 w-96 max-w-sm"
             style={{
-              background: 'rgba(255, 255, 255, 0.15)',
+              background: isDarkMode 
+                ? 'rgba(38, 38, 38, 0.95)' // Pure neutral dark gray
+                : 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: modalAnimating ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 8px 8px 16px rgba(163, 163, 163, 0.2), -8px -8px 16px rgba(255, 255, 255, 0.8)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              left: modalAnimating ? '50%' : `${buttonPosition.x}px`,
-              top: modalAnimating ? '50%' : `${buttonPosition.y}px`,
-              transform: modalAnimating ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.1)',
-              transformOrigin: 'center center',
-              transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              opacity: modalAnimating ? 1 : 0
+              border: isDarkMode 
+                ? '1px solid rgba(82, 82, 82, 0.6)' // Neutral gray border
+                : '1px solid rgba(229, 231, 235, 0.8)',
+              boxShadow: isDarkMode 
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.6), 8px 8px 32px rgba(0, 0, 0, 0.4)' 
+                : '0 25px 50px -12px rgba(0, 0, 0, 0.25), 8px 8px 32px rgba(107, 114, 128, 0.2)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Create New Note</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 no-select" style={{textShadow: '0 1px 2px rgba(0,0,0,0.3)'}}>Create New Note</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" style={{textShadow: '0 1px 1px rgba(0,0,0,0.2)'}}>Note Name</label>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2 no-select" style={{textShadow: '0 1px 1px rgba(0,0,0,0.2)'}}>Note Name</label>
                 <input
                   type="text"
                   value={noteName}
                   onChange={(e) => setNoteName(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 dark:text-white border-0"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
+                    background: isDarkMode 
+                      ? 'rgba(64, 64, 64, 0.7)' // Pure neutral gray
+                      : 'rgba(255, 255, 255, 0.7)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)'
+                    border: isDarkMode 
+                      ? '1px solid rgba(96, 96, 96, 0.6)' // Neutral gray border
+                      : '1px solid rgba(229, 231, 235, 0.8)'
                   }}
                   placeholder="Enter note name"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" style={{textShadow: '0 1px 1px rgba(0,0,0,0.2)'}}>Optional: Upload File for AI Processing</label>
+                <label className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2 no-select" style={{textShadow: '0 1px 1px rgba(0,0,0,0.2)'}}>Optional: Upload File for AI Processing</label>
                 <input
                   type="file"
                   ref={modalFileInputRef}
@@ -693,10 +745,14 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                   }}
                   className="w-full px-3 py-2 rounded-lg text-sm text-gray-900 dark:text-white border-0 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:text-green-700 hover:file:bg-green-100"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
+                    background: isDarkMode 
+                      ? 'rgba(64, 64, 64, 0.7)' // Pure neutral gray
+                      : 'rgba(255, 255, 255, 0.7)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)'
+                    border: isDarkMode 
+                      ? '1px solid rgba(96, 96, 96, 0.6)' // Neutral gray border
+                      : '1px solid rgba(229, 231, 235, 0.8)'
                   }}
                 />
                 <p className="text-xs text-gray-700 dark:text-gray-300 mt-1" style={{textShadow: '0 1px 1px rgba(0,0,0,0.1)'}}>
@@ -708,21 +764,24 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                 <button
                   onClick={() => {
                     setShowNewNoteModal(false);
-                    setModalAnimating(false);
                     setNoteName('New Note');
                     setSelectedFile(null);
                     if (modalFileInputRef.current) modalFileInputRef.current.value = '';
                   }}
                   className="flex-1 px-4 py-2 text-sm font-medium text-gray-800 dark:text-gray-200 rounded-lg transition-all border-0"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.15)',
+                    background: isDarkMode 
+                      ? 'rgba(82, 82, 82, 0.5)' // Pure neutral gray
+                      : 'rgba(255, 255, 255, 0.5)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    border: isDarkMode 
+                      ? '1px solid rgba(115, 115, 115, 0.4)' // Neutral gray border
+                      : '1px solid rgba(229, 231, 235, 0.6)',
                     textShadow: '0 1px 1px rgba(0,0,0,0.2)'
                   }}
-                  onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.25)'}
-                  onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.15)'}
+                  onMouseEnter={(e) => e.target.style.background = isDarkMode ? 'rgba(82, 82, 82, 0.7)' : 'rgba(255, 255, 255, 0.7)'}
+                  onMouseLeave={(e) => e.target.style.background = isDarkMode ? 'rgba(82, 82, 82, 0.5)' : 'rgba(255, 255, 255, 0.5)'}
                 >
                   Cancel
                 </button>
@@ -738,7 +797,6 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                         await onCreateNote(noteName);
                       }
                       setShowNewNoteModal(false);
-                      setModalAnimating(false);
                       setNoteName('New Note');
                       setSelectedFile(null);
                       if (modalFileInputRef.current) modalFileInputRef.current.value = '';
@@ -751,7 +809,9 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                     background: 'rgba(34, 197, 94, 0.8)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    border: isDarkMode 
+                      ? '1px solid rgba(82, 82, 82, 0.4)'
+                      : '1px solid rgba(255, 255, 255, 0.3)',
                     textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                   }}
                   onMouseEnter={(e) => e.target.style.background = 'rgba(34, 197, 94, 0.9)'}
@@ -1323,7 +1383,7 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                                     className="text-xl font-bold text-gray-900 dark:text-gray-100 cursor-pointer neu-button rounded-lg px-3 py-1 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-left"
                                     title="Click to rename"
                                 >
-                                    {getDisplayName(docProp.filename)}
+                                    <span className="no-select">{getDisplayName(docProp.filename)}</span>
                                 </h2>
                             )}
                         </div>
@@ -1331,7 +1391,7 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                             <div className="flex items-center gap-1 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
                                 {tabs.map(tab => (
                                     <button key={tab} onClick={() => setActiveTab(tab)}
-                                        className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-md border border-gray-300 dark:border-gray-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                        className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap no-select ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-md border border-gray-300 dark:border-gray-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                                         {tab}
                                     </button>
                                 ))}
@@ -1510,6 +1570,23 @@ const App = () => {
       return () => timers.forEach(timer => clearTimeout(timer));
     }
   }, [documentsStatusKey, documents]);
+
+  // Inject custom selection styles
+  useEffect(() => {
+    const styleId = 'custom-selection-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = customStyles;
+      document.head.appendChild(style);
+    }
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
   
   // Use useLayoutEffect for instant, synchronous DOM updates BEFORE paint
   useLayoutEffect(() => {
@@ -1664,6 +1741,7 @@ const App = () => {
                             onCreateNote={handleCreateNote}
                             onDeleteDocument={handleDeleteDocument}
                             onRenameDocument={handleRenameDocument}
+                            isDarkMode={isDarkMode}
                     />
                 </div>
                 {/* Vertical Separator */}
