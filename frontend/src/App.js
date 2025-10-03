@@ -175,6 +175,22 @@ const icons = {
   fail: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
   delete: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
   trash: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
+  threeDots: (
+    <span style={{
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      fontWeight: 'normal',
+      color: '#6b7280',
+      lineHeight: '1',
+      letterSpacing: '1px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      •••
+    </span>
+  ),
+  edit: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
 };
 
 
@@ -287,12 +303,26 @@ const Sidebar = ({ activePage, setActivePage }) => {
     );
 };
 
-const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch }) => {
+const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, onClearSearch }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && searchQuery) {
-            onSearch(searchQuery);
+        if (e.key === 'Enter') {
+            if (searchQuery) {
+                onSearch(searchQuery);
+            } else {
+                onClearSearch();
+            }
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+        
+        // If search is cleared, restore all documents
+        if (value === '') {
+            onClearSearch();
         }
     };
 
@@ -306,7 +336,7 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch }) 
                     <input type="search" placeholder="Semantic Search..." 
                            className="w-full pl-12 pr-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-500 focus:bg-white dark:focus:bg-gray-700 text-center text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all shadow-sm focus:shadow-md"
               value={searchQuery}
-                           onChange={(e) => setSearchQuery(e.target.value)}
+                           onChange={handleInputChange}
                            onKeyDown={handleSearch}
             />
           </div>
@@ -316,15 +346,19 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch }) 
                     {isDarkMode ? icons.sun : icons.moon}
           </button>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200 no-select">{username}</span>
-                <button onClick={onLogout} className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 transition-colors shadow-md hover:shadow-lg">Logout</button>
+                <button onClick={onLogout} className="text-sm px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 transition-colors shadow-md hover:shadow-lg">Logout</button>
         </div>
         </header>
     );
 };
 
-const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onDeleteDocument }) => {
+const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, onDeleteDocument, onRenameDocument }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [activeMenu, setActiveMenu] = useState(null);
+    const [renamingDoc, setRenamingDoc] = useState(null);
+    const [newName, setNewName] = useState('');
     const fileInputRef = useRef(null);
+    const menuRef = useRef(null);
 
     const handleUploadClick = () => {
         fileInputRef.current.click();
@@ -342,14 +376,54 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
         if (window.confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
             onDeleteDocument(docId);
         }
+        setActiveMenu(null);
     };
+
+    const handleMenuToggle = (e, docId) => {
+        e.stopPropagation();
+        setActiveMenu(activeMenu === docId ? null : docId);
+    };
+
+    const handleRename = (e, doc) => {
+        e.stopPropagation();
+        setRenamingDoc(doc.id);
+        setNewName(getDisplayName(doc.filename));
+        setActiveMenu(null);
+    };
+
+    const handleRenameSubmit = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (newName.trim() && renamingDoc) {
+            onRenameDocument(renamingDoc, newName.trim());
+            setRenamingDoc(null);
+            setNewName('');
+        }
+    };
+
+    const handleRenameCancel = (e) => {
+        e.stopPropagation();
+        setRenamingDoc(null);
+        setNewName('');
+    };
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setActiveMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const StatusIcon = ({ status }) => {
         switch (status) {
             case 'processing': 
                 return (
-                    <div className="text-blue-500" title="Processing...">
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <div className="w-4 h-4 flex items-center justify-center" title="Processing...">
+                        <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -357,16 +431,16 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                 );
             case 'completed': 
                 return (
-                    <div className="text-green-500" title="Completed">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-4 h-4 flex items-center justify-center" title="Completed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style={{stroke: '#22c55e'}} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
                 );
             case 'failed': 
                 return (
-                    <div className="text-red-500" title="Failed">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="w-4 h-4 flex items-center justify-center" title="Failed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style={{stroke: '#ef4444'}} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="15" y1="9" x2="9" y2="15"></line>
                             <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -386,7 +460,7 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
         <div className={`document-list ${isCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-850 shadow-sm`}>
       <div className="p-3">
                 <div className="flex items-center justify-between mb-3">
-                    {!isCollapsed && <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2">Notes</span>}
+                    {!isCollapsed && <span className="text-lg font-bold text-gray-900 dark:text-gray-100 px-2">Notes</span>}
                     <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors ml-auto">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
                             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -402,68 +476,109 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                     </button>
                 )}
             </div>
-            <div className="flex flex-col px-2 space-y-1">
+            <div className="flex flex-col px-2 space-y-1" ref={menuRef}>
                 {documents.map(doc => (
-                    <button key={doc.id} onClick={() => onSelectDocument(doc)}
-                        className={`p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'} overflow-hidden` }>
-                        {!isCollapsed ? (
-                            <>
-                                <div className="flex justify-between items-start">
-                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 flex-1 pr-2 truncate">{getDisplayName(doc.filename)}</h3>
-                                   <div className="flex items-center space-x-1">
-                                       <StatusIcon status={doc.status} />
-                                       <button 
-                                           onClick={(e) => handleDelete(e, doc.id)}
-                                           className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
-                                           title="Delete document"
-                                       >
-                                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                               <polyline points="3 6 5 6 21 6"></polyline>
-                                               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                               <line x1="10" y1="11" x2="10" y2="17"></line>
-                                               <line x1="14" y1="11" x2="14" y2="17"></line>
-                                           </svg>
-                                       </button>
-                                   </div>
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                   {new Date(doc.uploadDate).toLocaleDateString()}
-                                </p>
-                            </>
+                    <div key={doc.id} className="relative">
+                        {renamingDoc === doc.id ? (
+                            <form onSubmit={handleRenameSubmit} className="p-2.5">
+                                <input
+                                    type="text"
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                    onBlur={handleRenameCancel}
+                                    autoFocus
+                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-gray-100"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </form>
                         ) : (
-                            <div className="flex justify-center items-center space-x-1">
-                                <StatusIcon status={doc.status} />
-                                <button 
-                                    onClick={(e) => handleDelete(e, doc.id)}
-                                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
-                                    title="Delete document"
+                            <button onClick={() => onSelectDocument(doc)}
+                                className={`w-full p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'} overflow-hidden`}>
+                                {!isCollapsed ? (
+                                    <>
+                                        <div className="flex justify-between items-start">
+                                           <div className="flex-1 min-w-0">
+                                               <div className="flex items-start gap-2">
+                                                   <StatusIcon status={doc.status} />
+                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate flex-1">{getDisplayName(doc.filename)}</h3>
+                                               </div>
+                                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1" style={{marginLeft: '24px'}}>
+                                                   {new Date(doc.uploadDate).toLocaleDateString()}
+                                               </p>
+                                           </div>
+                                           <button 
+                                               onClick={(e) => handleMenuToggle(e, doc.id)}
+                                               className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center justify-center min-w-6 min-h-6 ml-2"
+                                               title="More options"
+                                           >
+                                               {icons.threeDots}
+                                           </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex justify-center items-center space-x-1">
+                                        <StatusIcon status={doc.status} />
+                                        <button 
+                                            onClick={(e) => handleMenuToggle(e, doc.id)}
+                                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center justify-center min-w-6 min-h-6"
+                                            title="More options"
+                                        >
+                                            {icons.threeDots}
+                                        </button>
+                                    </div>
+                                )}
+                            </button>
+                        )}
+                        {activeMenu === doc.id && (
+                            <div className="absolute right-0 top-0 mt-10 mr-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 py-1 min-w-32">
+                                <button
+                                    onClick={(e) => handleRename(e, doc)}
+                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                                    </svg>
+                                    {icons.edit}
+                                    <span>Rename</span>
+                                </button>
+                                <button
+                                    onClick={(e) => handleDelete(e, doc.id)}
+                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+                                >
+                                    {icons.trash}
+                                    <span>Delete</span>
                                 </button>
                             </div>
                         )}
-                    </button>
+                    </div>
                 ))}
       </div>
     </div>
   );
 };
 
-const DocumentViewer = ({ document: docProp, user, onContentGenerated }) => {
+const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDocument }) => {
     const [activeTab, setActiveTab] = useState('Notes');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [originalContent, setOriginalContent] = useState('');
     const [markdownContent, setMarkdownContent] = useState('');
+    const [summaryContent, setSummaryContent] = useState('');
+    const [quizContent, setQuizContent] = useState('');
     const [isDarkMode, setIsDarkMode] = useState(false);
     
     // The active document now holds its own generated content
     const generatedContent = docProp?.generated_content || [];
+    
+    // Create BlockNote editor instances FIRST
+    const notesEditor = useCreateBlockNote({
+        initialContent: undefined,
+    });
+    
+    const summaryEditor = useCreateBlockNote({
+        initialContent: undefined,
+    });
+    
+    const quizEditor = useCreateBlockNote({
+        initialContent: undefined,
+    });
     
     // Detect dark mode
     useEffect(() => {
@@ -484,44 +599,106 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated }) => {
 
     useEffect(() => {
         if (docProp) {
-            setActiveTab('Notes');
-            // Reset original content when document changes
-            setOriginalContent('');
-            // Initialize markdown content
-            const notes = generatedContent.find(c => c.contentType === 'notes');
-            if (notes) {
-                setMarkdownContent(notes.contentData.markdown_text);
+            // Only reset tab when document changes, not when content is generated
+            if (!activeDocument || activeDocument?.id !== docProp.id) {
+                setActiveTab('Notes');
+                // Clear all content states when switching documents
+                setMarkdownContent('');
+                setSummaryContent('');
+                setQuizContent('');
+                setOriginalContent('');
+                
+                // Clear the editors
+                if (notesEditor) {
+                    notesEditor.replaceBlocks(notesEditor.document, []);
+                }
+                if (summaryEditor) {
+                    summaryEditor.replaceBlocks(summaryEditor.document, []);
+                }
+                if (quizEditor) {
+                    quizEditor.replaceBlocks(quizEditor.document, []);
+                }
             }
         }
-    }, [docProp, generatedContent]);
+    }, [docProp, activeDocument, notesEditor, summaryEditor, quizEditor]);
     
-    // Create BlockNote editor instance with markdown content
-    const editor = useCreateBlockNote({
-        initialContent: markdownContent ? undefined : undefined,
-    });
-    
-    // Load markdown content into editor when it changes
+    // Separate effect to update content when generatedContent changes
     useEffect(() => {
-        if (editor && markdownContent) {
-            // Use BlockNote's built-in markdown parser
+        const notes = generatedContent.find(c => c.contentType === 'notes');
+        const summary = generatedContent.find(c => c.contentType === 'summary');
+        const quiz = generatedContent.find(c => c.contentType === 'quiz');
+        
+        // Always update content to match the current document
+        // If content doesn't exist, set to empty string
+        const newNotesContent = notes?.contentData?.markdown_text || '';
+        const newSummaryContent = summary?.contentData?.markdown_text || '';
+        const newQuizContent = quiz?.contentData?.markdown_text || '';
+        
+        setMarkdownContent(newNotesContent);
+        setSummaryContent(newSummaryContent);
+        setQuizContent(newQuizContent);
+    }, [generatedContent, docProp?.id]); // Added docProp?.id to force update on document change
+    
+    // Load content into editors when it changes
+    useEffect(() => {
+        if (notesEditor && markdownContent) {
             async function loadMarkdown() {
                 try {
-                    const blocks = await editor.tryParseMarkdownToBlocks(markdownContent);
-                    editor.replaceBlocks(editor.document, blocks);
+                    const blocks = await notesEditor.tryParseMarkdownToBlocks(markdownContent);
+                    notesEditor.replaceBlocks(notesEditor.document, blocks);
                 } catch (error) {
-                    console.error('Failed to parse markdown:', error);
+                    console.error('Failed to parse notes markdown:', error);
                 }
             }
             loadMarkdown();
         }
-    }, [markdownContent, editor]);
+    }, [markdownContent, notesEditor]);
+    
+    useEffect(() => {
+        if (summaryEditor && summaryContent) {
+            async function loadSummary() {
+                try {
+                    const blocks = await summaryEditor.tryParseMarkdownToBlocks(summaryContent);
+                    summaryEditor.replaceBlocks(summaryEditor.document, blocks);
+                } catch (error) {
+                    console.error('Failed to parse summary markdown:', error);
+                }
+            }
+            loadSummary();
+        }
+    }, [summaryContent, summaryEditor]);
+    
+    useEffect(() => {
+        if (quizEditor && quizContent) {
+            async function loadQuiz() {
+                try {
+                    const blocks = await quizEditor.tryParseMarkdownToBlocks(quizContent);
+                    quizEditor.replaceBlocks(quizEditor.document, blocks);
+                } catch (error) {
+                    console.error('Failed to parse quiz markdown:', error);
+                }
+            }
+            loadQuiz();
+        }
+    }, [quizContent, quizEditor]);
+    
+
     
     const handleGenerate = async (contentType) => {
         setIsLoading(true);
         setError('');
         try {
             const newContent = await apiClient.generateContent(user, docProp.id, contentType);
+            
+            // Update the parent component's state
             onContentGenerated(docProp.id, newContent);
+            
+            // Update local content state immediately to trigger editor updates
+            if (contentType === 'summary' && newContent?.contentData?.markdown_text) {
+                setSummaryContent(newContent.contentData.markdown_text);
+            } else if (contentType === 'quiz' && newContent?.contentData?.markdown_text) {
+                setQuizContent(newContent.contentData.markdown_text);
+            }
         } catch (err) {
             setError(`Failed to generate ${contentType}.`);
         } finally {
@@ -530,33 +707,79 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated }) => {
     };
     
     // Debounced export to markdown to avoid heavy work on every keystroke
-    const debouncedRef = useRef(null);
-    const handleEditorChange = useCallback(() => {
-        if (!editor) return;
-        if (debouncedRef.current) {
-            clearTimeout(debouncedRef.current);
+    const notesDebounceRef = useRef(null);
+    const summaryDebounceRef = useRef(null);
+    const quizDebounceRef = useRef(null);
+    
+    const handleNotesEditorChange = useCallback(() => {
+        if (!notesEditor) return;
+        if (notesDebounceRef.current) {
+            clearTimeout(notesDebounceRef.current);
         }
-        debouncedRef.current = setTimeout(async () => {
+        notesDebounceRef.current = setTimeout(async () => {
             try {
-                const markdown = await editor.blocksToMarkdownLossy(editor.document);
-                console.log('Content updated:', markdown);
+                const markdown = await notesEditor.blocksToMarkdownLossy(notesEditor.document);
+                console.log('Notes content updated:', markdown);
             } catch (error) {
-                console.error('Failed to convert to markdown:', error);
+                console.error('Failed to convert notes to markdown:', error);
             }
         }, 250);
-    }, [editor]);
+    }, [notesEditor]);
+    
+    const handleSummaryEditorChange = useCallback(() => {
+        if (!summaryEditor) return;
+        if (summaryDebounceRef.current) {
+            clearTimeout(summaryDebounceRef.current);
+        }
+        summaryDebounceRef.current = setTimeout(async () => {
+            try {
+                const markdown = await summaryEditor.blocksToMarkdownLossy(summaryEditor.document);
+                console.log('Summary content updated:', markdown);
+            } catch (error) {
+                console.error('Failed to convert summary to markdown:', error);
+            }
+        }, 250);
+    }, [summaryEditor]);
+    
+    const handleQuizEditorChange = useCallback(() => {
+        if (!quizEditor) return;
+        if (quizDebounceRef.current) {
+            clearTimeout(quizDebounceRef.current);
+        }
+        quizDebounceRef.current = setTimeout(async () => {
+            try {
+                const markdown = await quizEditor.blocksToMarkdownLossy(quizEditor.document);
+                console.log('Quiz content updated:', markdown);
+            } catch (error) {
+                console.error('Failed to convert quiz to markdown:', error);
+            }
+        }, 250);
+    }, [quizEditor]);
 
-    // eslint-disable-next-line no-unused-vars
     const handleViewOriginal = async () => {
-        // This is a simplified approach and has security implications in production.
-        // It's suitable for local development where the media folder is accessible.
-        // A production app would use a secure, authenticated endpoint to serve files.
-        if (['txt', 'md'].includes(document.fileType)) {
-             // We can't fetch local file paths directly from the browser for security reasons.
-             // This is a placeholder to show the concept.
-             setOriginalContent("Viewing original content for PDF/DOCX is not supported in this simplified viewer. You can open the file from your local 'media/uploads' directory.");
-        } else {
-            setOriginalContent("Viewing original content for PDF/DOCX is not supported in this simplified viewer. You can open the file from your local 'media/uploads' directory.");
+        try {
+            // In a production app, you would call a secure API endpoint to get the file content
+            // For now, we'll show a placeholder message
+            setOriginalContent(`Original file: ${docProp.filename}\n\nTo view the original content, you can find the file in the 'media/uploads' directory of your backend.\n\nIn a production environment, this would show the actual file content or provide a secure download link.`);
+        } catch (error) {
+            setError('Failed to load original content.');
+        }
+    };
+    
+    const handleDownloadOriginal = async () => {
+        try {
+            // Create a download link for the original file
+            // In production, this would be a secure API endpoint
+            const downloadUrl = `/media/uploads/${docProp.filename}`;
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = docProp.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert('Download failed. Please check if the file exists.');
         }
     };
     
@@ -586,25 +809,84 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated }) => {
                 return (
                     <div className="h-full overflow-auto" data-color-mode={isDarkMode ? "dark" : "light"}>
                         <BlockNoteView
-                            editor={editor}
-                            onChange={handleEditorChange}
+                            editor={notesEditor}
+                            onChange={handleNotesEditorChange}
                             theme={isDarkMode ? "dark" : "light"}
                             className="h-full"
                         />
                     </div>
                 );
             case 'Summary':
-                return summary ? 
-                    <div className="prose max-w-none">
-                        <ReactMarkdown>{summary.contentData.markdown_text}</ReactMarkdown>
-                    </div> : 
-                    <div className="text-center p-6"><button onClick={() => handleGenerate('summary')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">Generate Summary</button></div>;
+                if (summary || summaryContent) {
+                    return (
+                        <div className="h-full overflow-auto" data-color-mode={isDarkMode ? "dark" : "light"}>
+                            <BlockNoteView
+                                editor={summaryEditor}
+                                onChange={handleSummaryEditorChange}
+                                theme={isDarkMode ? "dark" : "light"}
+                                className="h-full"
+                            />
+                        </div>
+                    );
+                } else {
+                    return (
+                        <div className="text-center p-6">
+                            <button onClick={() => handleGenerate('summary')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">
+                                Generate Summary
+                            </button>
+                        </div>
+                    );
+                }
             case 'Quiz':
-                 return quiz ?
-                    <p className="text-center text-gray-600 dark:text-gray-400">Quiz display not implemented yet.</p> :
-                    <div className="text-center p-6"><button onClick={() => handleGenerate('quiz')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">Generate Quiz</button></div>;
+                if (quiz || quizContent) {
+                    return (
+                        <div className="h-full overflow-auto" data-color-mode={isDarkMode ? "dark" : "light"}>
+                            <BlockNoteView
+                                editor={quizEditor}
+                                onChange={handleQuizEditorChange}
+                                theme={isDarkMode ? "dark" : "light"}
+                                className="h-full"
+                            />
+                        </div>
+                    );
+                } else {
+                    return (
+                        <div className="text-center p-6">
+                            <button onClick={() => handleGenerate('quiz')} className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg">
+                                Generate Quiz
+                            </button>
+                        </div>
+                    );
+                }
             case 'Original':
-                return <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-300">{originalContent || "Click button to load original content."}</pre>;
+                return (
+                    <div className="p-6 space-y-4">
+                        <div className="flex space-x-3">
+                            <button 
+                                onClick={handleViewOriginal}
+                                className="bg-gray-800 dark:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors shadow-md hover:shadow-lg"
+                            >
+                                View Original
+                            </button>
+                            <button 
+                                onClick={handleDownloadOriginal}
+                                className="bg-blue-600 dark:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-md hover:shadow-lg flex items-center space-x-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                <span>Download Original</span>
+                            </button>
+                        </div>
+                        <div className="mt-4">
+                            <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border">
+                                {originalContent || "Click 'View Original' to load the original document content."}
+                            </pre>
+                        </div>
+                    </div>
+                );
       default:
         return null;
     }
@@ -833,6 +1115,32 @@ const App = () => {
     }
   };
   
+  const handleRenameDocument = async (docId, newName) => {
+    try {
+        // In a real app, you would call an API to rename the document
+        // For now, we'll just update the local state
+        const updatedDocs = documents.map(doc => {
+            if (doc.id === docId) {
+                const extension = doc.filename.split('.').pop();
+                const newFilename = `${newName}.${extension}`;
+                return { ...doc, filename: newFilename };
+            }
+            return doc;
+        });
+        setDocuments(updatedDocs);
+        
+        // Update active document if it's the one being renamed
+        if (activeDocument?.id === docId) {
+            const extension = activeDocument.filename.split('.').pop();
+            const newFilename = `${newName}.${extension}`;
+            setActiveDocument({ ...activeDocument, filename: newFilename });
+        }
+    } catch (error) {
+        console.error("Rename failed:", error);
+        alert(error.message || "Failed to rename document. Please try again.");
+    }
+  };
+  
   if (isLoadingApp) {
       return <div className="h-screen w-screen flex items-center justify-center bg-gray-100 dark:bg-gray-850"><div className="text-gray-500 dark:text-gray-400">{icons.spinner}</div></div>;
   }
@@ -852,11 +1160,13 @@ const App = () => {
                         onSelectDocument={setActiveDocument}
                         onUpload={handleUpload}
                         onDeleteDocument={handleDeleteDocument}
+                        onRenameDocument={handleRenameDocument}
                 />
                 <DocumentViewer
                         document={activeDocument} 
                         user={user} 
                         onContentGenerated={handleContentGenerated} 
+                        activeDocument={activeDocument}
                     />
                   </div>
               );
@@ -879,6 +1189,7 @@ const App = () => {
                 isDarkMode={isDarkMode}
                 onToggleDarkMode={handleToggleDarkMode}
                 onSearch={(query) => apiClient.searchDocuments(user, query).then(setDocuments)}
+                onClearSearch={() => fetchDocuments(user)}
               />
             <div className="flex-1 overflow-hidden p-4 bg-gray-50 dark:bg-gray-950 min-h-0">
                 <div className="h-full w-full bg-white dark:bg-gray-850 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
