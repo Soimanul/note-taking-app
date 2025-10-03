@@ -295,7 +295,7 @@ const Sidebar = ({ activePage, setActivePage, isCollapsed, setIsCollapsed }) => 
         { name: 'Profile', icon: icons.profile },
     ];
   return (
-        <aside className={`${isCollapsed ? 'w-16' : 'w-52'} flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col shadow-sm transition-[width] duration-150 ease-out`}>
+        <aside className={`${isCollapsed ? 'w-16' : 'w-52'} flex-shrink-0 bg-gray-100 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col shadow-sm transition-[width] duration-150 ease-out`}>
             <div className="flex items-center justify-between mb-6">
                 {!isCollapsed && <div className="font-bold text-3xl text-gray-900 dark:text-gray-100 pl-3 no-select">Synapse</div>}
                 <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 ml-auto transition-colors hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded">
@@ -360,7 +360,7 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
                         {icons.search}
                     </div>
                     <input type="search" placeholder="Semantic Search..." 
-                           className="w-full pl-12 pr-4 py-1.5 rounded-xl neu-inset bg-gray-50 dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all focus:outline-none border border-gray-300 dark:border-gray-600"
+                           className="w-full pl-12 pr-4 py-1.5 rounded-xl neu-inset bg-gray-100 dark:bg-gray-950 text-left text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all focus:outline-none border border-gray-300 dark:border-gray-600"
               value={searchQuery}
                            onChange={handleInputChange}
                            onKeyDown={handleSearch}
@@ -1594,7 +1594,7 @@ const App = () => {
                 onClearSearch={() => fetchDocuments(user)}
                 isCollapsed={isCollapsed}
               />
-            <div className="flex-1 overflow-hidden p-4 bg-gray-50 dark:bg-gray-950 min-h-0">
+            <div className="flex-1 overflow-hidden p-4 bg-gray-100 dark:bg-gray-950 min-h-0">
                 <div className="h-full w-full bg-white dark:bg-gray-850 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {renderMainContent()}
           </div>
