@@ -192,7 +192,7 @@ const icons = {
   search: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   sun: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>,
   moon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>,
-  spinner: <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>,
+  spinner: <svg className="animate-optimized-spin hw-accelerated h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>,
   success: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
   fail: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
   delete: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>,
@@ -356,7 +356,7 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
                         {icons.search}
                     </div>
                     <input type="search" placeholder="Semantic Search..." 
-                           className="w-full pl-12 pr-4 py-3 rounded-xl neu-inset bg-gray-50 dark:bg-gray-800 text-center text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all focus:outline-none"
+                           className="w-full pl-12 pr-4 py-1.5 rounded-xl neu-inset bg-gray-50 dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all focus:outline-none border border-gray-300 dark:border-gray-600"
               value={searchQuery}
                            onChange={handleInputChange}
                            onKeyDown={handleSearch}
@@ -472,16 +472,15 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
         switch (status) {
             case 'processing': 
                 return (
-                    <div className="w-4 h-4 flex items-center justify-center" title="Processing...">
-                        <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <div className="w-4 h-4 flex items-center justify-center hw-accelerated" title="Processing...">
+                        <svg className="animate-optimized-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style={{stroke: '#6b7280'}} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
                         </svg>
                     </div>
                 );
             case 'completed': 
                 return (
-                    <div className="w-4 h-4 flex items-center justify-center" title="Completed">
+                    <div className="w-4 h-4 flex items-center justify-center animate-optimized-bounce hw-accelerated" title="Completed">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style={{stroke: '#22c55e'}} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
@@ -489,7 +488,7 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                 );
             case 'failed': 
                 return (
-                    <div className="w-4 h-4 flex items-center justify-center" title="Failed">
+                    <div className="w-4 h-4 flex items-center justify-center animate-optimized-pulse hw-accelerated" title="Failed">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" style={{stroke: '#ef4444'}} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="15" y1="9" x2="9" y2="15"></line>
@@ -509,12 +508,12 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
   return (
         <div className={`document-list ${isCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 flex flex-col neu-container neu-raised h-full`}>
             {/* Sticky Header for Notes and New Note Button */}
-            <div className="sticky-header bg-white/95 dark:bg-gray-850/95 sticky top-0 z-20 flex-shrink-0">
-                <div className="p-3 sticky-separator">
+            <div className="sticky-header bg-white/95 dark:bg-gray-850/95 sticky top-0 z-20 flex-shrink-0 -ml-3 mr-1">
+                <div className="px-6 py-3 pr-4 sticky-separator">
                     <div className="flex items-center justify-between mb-3">
-                        {!isCollapsed && <span className="text-lg font-bold text-gray-900 dark:text-gray-100 px-2">Notes</span>}
-                        <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-2 neu-circle transition-all ml-auto w-8 h-8 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
+                        {!isCollapsed && <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Notes</span>}
+                        <button onClick={() => setIsCollapsed(!isCollapsed)} className={`p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded transition-colors shadow-md text-gray-700 dark:text-gray-300 ${!isCollapsed ? 'ml-auto' : 'mx-auto'}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <line x1="3" y1="12" x2="21" y2="12"></line>
                                 <line x1="3" y1="6" x2="21" y2="6"></line>
                                 <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -534,12 +533,13 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                         </button>
                     )}
                 </div>
-                {/* Horizontal Separator */}
-                <div className="border-b border-gray-200 dark:border-gray-700"></div>
+                {/* Horizontal Separator - reaches both left and right borders */}
+                <div className="border-b border-gray-200 dark:border-gray-700 -ml-6" style={{marginRight: '-0.675rem'}}></div>
             </div>
             {/* Scrollable Document List */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-                <div className="flex flex-col px-2 space-y-1 pb-4" ref={menuRef}>
+            <div className="flex-1 overflow-y-auto min-h-0 notes-scrollbar">
+                {/* Add right padding so selected highlight isn't visually clipped */}
+                <div className="flex flex-col px-2 pr-4 space-y-1 pb-4 pt-2" ref={menuRef}>
                     {documents.map(doc => (
                         <div key={doc.id} className="relative">
                             {renamingDoc === doc.id ? (
@@ -556,38 +556,35 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                                 </form>
                             ) : (
                                 <button onClick={() => onSelectDocument(doc)}
-                                    className={`w-full p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'} overflow-hidden`}>
+                                    className={`w-full p-2.5 text-left rounded-xl transition-all duration-300 ${
+                                        doc.status === 'processing' ? 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 animate-optimized-pulse opacity-60 hw-accelerated' :
+                                        doc.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 animate-optimized-pulse hw-accelerated' :
+                                        doc.status === 'failed' ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' :
+                                        activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float ring-1 ring-gray-300 dark:ring-gray-700' : 
+                                        'hover:bg-gray-50 dark:hover:bg-gray-850'
+                                    }`}>
                                     {!isCollapsed ? (
-                                        <>
-                                            <div className="flex justify-between items-center">
-                                               <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                   <StatusIcon status={doc.status} />
-                                                   <div className="flex-1 min-w-0">
-                                                       <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{getDisplayName(doc.filename)}</h3>
-                                                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                           {new Date(doc.uploadDate).toLocaleDateString()}
-                                                       </p>
-                                                   </div>
+                                        <div className="flex justify-between items-center">
+                                           <div className="flex items-center gap-2 flex-1 min-w-0">
+                                               <StatusIcon status={doc.status} />
+                                               <div className="flex-1 min-w-0">
+                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{getDisplayName(doc.filename)}</h3>
+                                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                       {new Date(doc.uploadDate).toLocaleDateString()}
+                                                   </p>
                                                </div>
-                                               <button 
-                                                   onClick={(e) => handleMenuToggle(e, doc.id)}
-                                                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center w-8 h-8 ml-3 hover:shadow-sm"
-                                                   title="More options"
-                                               >
-                                                   {icons.threeDots}
-                                               </button>
-                                            </div>
-                                        </>
+                                           </div>
+                                           <button 
+                                               onClick={(e) => handleMenuToggle(e, doc.id)}
+                                               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center w-8 h-8 ml-3 hover:shadow-sm"
+                                               title="More options"
+                                           >
+                                               {icons.threeDots}
+                                           </button>
+                                        </div>
                                     ) : (
-                                        <div className="flex justify-center items-center space-x-1">
+                                        <div className="flex justify-center items-center">
                                             <StatusIcon status={doc.status} />
-                                            <button 
-                                                onClick={(e) => handleMenuToggle(e, doc.id)}
-                                                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center justify-center min-w-6 min-h-6"
-                                                title="More options"
-                                            >
-                                                {icons.threeDots}
-                                            </button>
                                         </div>
                                     )}
                                 </button>
@@ -1176,9 +1173,8 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
             {/* Sticky Header */}
             <div className="sticky-header bg-white/95 dark:bg-gray-850/95 sticky top-0 z-20">
                 <div className="flex-shrink-0 px-6 pt-4 pb-3 neu-inset rounded-t-xl sticky-separator">
-                    <div className="flex items-center justify-between">
-                        <div className="flex-1"></div>
-                        <div className="flex-1 flex justify-start">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 flex items-center">
                             {renamingTitle ? (
                                 <input
                                     type="text"
@@ -1221,11 +1217,11 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                                 </h2>
                             )}
                         </div>
-                        <div className="flex-1 flex justify-end">
-                            <div className="flex items-center space-x-2 p-1 rounded-xl neu-inset flex-shrink-0 bg-gray-100 dark:bg-gray-700">
+                        <div className="flex items-center">
+                            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600">
                                 {tabs.map(tab => (
                                     <button key={tab} onClick={() => setActiveTab(tab)}
-                                        className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                                        className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-md border border-gray-300 dark:border-gray-600' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                                         {tab}
                                     </button>
                                 ))}
@@ -1236,7 +1232,7 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                 {/* Horizontal Separator */}
                 <div className="border-b border-gray-200 dark:border-gray-700"></div>
             </div>
-            <div className="flex-1 overflow-y-auto overflow-x-hidden text-sm min-h-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden text-sm min-h-0 content-scrollbar">
                 {renderContent()}
             </div>
         </div>
@@ -1314,7 +1310,17 @@ const App = () => {
     setAppError('');
     apiClient.getDocuments(currentUser)
       .then(docs => {
-        setDocuments(docs);
+        setDocuments(prevDocs => {
+          // Preserve local status clearing (null status) if document was previously completed
+          return docs.map(doc => {
+            const prevDoc = prevDocs.find(d => d.id === doc.id);
+            // If we previously cleared the status (set to null), don't override with 'completed' from API
+            if (prevDoc && prevDoc.status === null && doc.status === 'completed') {
+              return { ...doc, status: null };
+            }
+            return doc;
+          });
+        });
         // If there's an active document, update its data in the list
         setActiveDocument(prevActiveDoc => {
           if (prevActiveDoc) {
@@ -1358,6 +1364,25 @@ const App = () => {
       fetchDocuments(user);
     }
   }, [user, fetchDocuments]);
+  
+  // Auto-clear completed status after 3 seconds and revert to normal
+  useEffect(() => {
+    const completedDocs = documents.filter(doc => doc.status === 'completed');
+    if (completedDocs.length > 0) {
+      // Use ref to track which documents we've already set timers for
+      const timers = completedDocs.map(doc => {
+        const timerId = setTimeout(() => {
+          setDocuments(prevDocs => 
+            prevDocs.map(d => 
+              d.id === doc.id && d.status === 'completed' ? { ...d, status: null } : d
+            )
+          );
+        }, 3000);
+        return timerId;
+      });
+      return () => timers.forEach(timer => clearTimeout(timer));
+    }
+  }, [documents.map(d => d.id + d.status).join(',')]); // Only trigger when status actually changes
   
   // Use useLayoutEffect for instant, synchronous DOM updates BEFORE paint
   useLayoutEffect(() => {
