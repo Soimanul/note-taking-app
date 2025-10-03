@@ -349,14 +349,14 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
     };
 
   return (
-        <header className="flex-shrink-0 h-16 flex items-center justify-between px-6 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-850 shadow-sm">
+        <header className="flex-shrink-0 h-16 flex items-center justify-between px-6 neu-container neu-inset">
             <div className="flex-1 max-w-lg mx-auto">
           <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
                         {icons.search}
                     </div>
                     <input type="search" placeholder="Semantic Search..." 
-                           className="w-full pl-12 pr-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-gray-500 dark:focus:ring-gray-500 focus:border-gray-500 dark:focus:border-gray-500 focus:bg-white dark:focus:bg-gray-700 text-center text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all shadow-sm focus:shadow-md"
+                           className="w-full pl-12 pr-4 py-3 rounded-xl neu-inset bg-gray-50 dark:bg-gray-800 text-center text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all focus:outline-none"
               value={searchQuery}
                            onChange={handleInputChange}
                            onKeyDown={handleSearch}
@@ -364,7 +364,7 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
           </div>
         </div>
         <div className="flex items-center space-x-4">
-                <button onClick={onToggleDarkMode} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
+                <button onClick={onToggleDarkMode} className="p-3 neu-circle w-12 h-12 flex items-center justify-center text-gray-600 dark:text-gray-300 transition-all">
                     {isDarkMode ? icons.sun : icons.moon}
           </button>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200 no-select">{username}</span>
@@ -378,6 +378,7 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
     const [renamingDoc, setRenamingDoc] = useState(null);
+    const [renamingTitle, setRenamingTitle] = useState(false);
     const [newName, setNewName] = useState('');
     const [showNewNoteModal, setShowNewNoteModal] = useState(false);
     const [modalAnimating, setModalAnimating] = useState(false);
@@ -506,108 +507,120 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
     };
 
   return (
-        <div className={`document-list ${isCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-850 shadow-sm`}>
-      <div className="p-3">
-                <div className="flex items-center justify-between mb-3">
-                    {!isCollapsed && <span className="text-lg font-bold text-gray-900 dark:text-gray-100 px-2">Notes</span>}
-                    <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors ml-auto">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </button>
-                </div>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                {!isCollapsed && (
-                    <button 
-                        ref={newNoteButtonRef}
-                        id="new-note-button"
-                        onClick={() => setShowNewNoteModal(true)} 
-                        className="w-full text-sm px-3 py-2 rounded-lg bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-3"
-                    >
-                        <span className="text-lg font-bold" style={{lineHeight: 1}}>+</span>
-                        New Note
-                    </button>
-                )}
-            </div>
-            <div className="flex flex-col px-2 space-y-1" ref={menuRef}>
-                {documents.map(doc => (
-                    <div key={doc.id} className="relative">
-                        {renamingDoc === doc.id ? (
-                            <form onSubmit={handleRenameSubmit} className="p-2.5">
-                                <input
-                                    type="text"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    onBlur={handleRenameCancel}
-                                    autoFocus
-                                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-gray-100"
-                                    onClick={(e) => e.stopPropagation()}
-                                />
-                            </form>
-                        ) : (
-                            <button onClick={() => onSelectDocument(doc)}
-                                className={`w-full p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'} overflow-hidden`}>
-                                {!isCollapsed ? (
-                                    <>
-                                        <div className="flex justify-between items-center">
-                                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                                               <StatusIcon status={doc.status} />
-                                               <div className="flex-1 min-w-0">
-                                                   <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{getDisplayName(doc.filename)}</h3>
-                                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                                       {new Date(doc.uploadDate).toLocaleDateString()}
-                                                   </p>
-                                               </div>
-                                           </div>
-                                           <button 
-                                               onClick={(e) => handleMenuToggle(e, doc.id)}
-                                               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center w-8 h-8 ml-3 hover:shadow-sm"
-                                               title="More options"
-                                           >
-                                               {icons.threeDots}
-                                           </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="flex justify-center items-center space-x-1">
-                                        <StatusIcon status={doc.status} />
-                                        <button 
-                                            onClick={(e) => handleMenuToggle(e, doc.id)}
-                                            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center justify-center min-w-6 min-h-6"
-                                            title="More options"
-                                        >
-                                            {icons.threeDots}
-                                        </button>
-                                    </div>
-                                )}
-                            </button>
-                        )}
-                        {activeMenu === doc.id && (
-                            <div className="absolute right-0 top-0 mt-10 mr-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 py-1 min-w-32">
-                                <button
-                                    onClick={(e) => handleRename(e, doc)}
-                                    className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-                                >
-                                    {icons.edit}
-                                    <span>Rename</span>
-                                </button>
-                                <button
-                                    onClick={(e) => handleDelete(e, doc.id)}
-                                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
-                                >
-                                    {icons.trash}
-                                    <span>Delete</span>
-                                </button>
-                            </div>
-                        )}
+        <div className={`document-list ${isCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 flex flex-col neu-container neu-raised h-full`}>
+            {/* Sticky Header for Notes and New Note Button */}
+            <div className="sticky-header bg-white/95 dark:bg-gray-850/95 sticky top-0 z-20 flex-shrink-0">
+                <div className="p-3 sticky-separator">
+                    <div className="flex items-center justify-between mb-3">
+                        {!isCollapsed && <span className="text-lg font-bold text-gray-900 dark:text-gray-100 px-2">Notes</span>}
+                        <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-2 neu-circle transition-all ml-auto w-8 h-8 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                        </button>
                     </div>
-                ))}
-      </div>
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                    {!isCollapsed && (
+                        <button 
+                            ref={newNoteButtonRef}
+                            id="new-note-button"
+                            onClick={() => setShowNewNoteModal(true)} 
+                            className="w-full text-sm px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2 mb-3 font-medium"
+                        >
+                            <span className="text-lg font-bold" style={{lineHeight: 1}}>+</span>
+                            New Note
+                        </button>
+                    )}
+                </div>
+                {/* Horizontal Separator */}
+                <div className="border-b border-gray-200 dark:border-gray-700"></div>
+            </div>
+            {/* Scrollable Document List */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+                <div className="flex flex-col px-2 space-y-1 pb-4" ref={menuRef}>
+                    {documents.map(doc => (
+                        <div key={doc.id} className="relative">
+                            {renamingDoc === doc.id ? (
+                                <form onSubmit={handleRenameSubmit} className="p-2.5">
+                                    <input
+                                        type="text"
+                                        value={newName}
+                                        onChange={(e) => setNewName(e.target.value)}
+                                        onBlur={handleRenameCancel}
+                                        autoFocus
+                                        className="w-full neu-inset rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 focus:outline-none"
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </form>
+                            ) : (
+                                <button onClick={() => onSelectDocument(doc)}
+                                    className={`w-full p-2.5 text-left rounded-xl transition-all ${activeDocument?.id === doc.id ? 'bg-gray-200 dark:bg-gray-800 shadow-float' : 'hover:bg-gray-50 dark:hover:bg-gray-850'} overflow-hidden`}>
+                                    {!isCollapsed ? (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                               <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                   <StatusIcon status={doc.status} />
+                                                   <div className="flex-1 min-w-0">
+                                                       <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{getDisplayName(doc.filename)}</h3>
+                                                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                           {new Date(doc.uploadDate).toLocaleDateString()}
+                                                       </p>
+                                                   </div>
+                                               </div>
+                                               <button 
+                                                   onClick={(e) => handleMenuToggle(e, doc.id)}
+                                                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-all duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center justify-center w-8 h-8 ml-3 hover:shadow-sm"
+                                                   title="More options"
+                                               >
+                                                   {icons.threeDots}
+                                               </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex justify-center items-center space-x-1">
+                                            <StatusIcon status={doc.status} />
+                                            <button 
+                                                onClick={(e) => handleMenuToggle(e, doc.id)}
+                                                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center justify-center min-w-6 min-h-6"
+                                                title="More options"
+                                            >
+                                                {icons.threeDots}
+                                            </button>
+                                        </div>
+                                    )}
+                                </button>
+                            )}
+                            {activeMenu === doc.id && (
+                                <div className="absolute right-0 top-0 mt-10 mr-2 neu-container neu-raised rounded-xl z-10 p-2 min-w-32">
+                                    <button
+                                        onClick={(e) => handleRename(e, doc)}
+                                        className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 neu-button rounded-2xl flex items-center space-x-3 mb-2"
+                                    >
+                                        <div className="neu-circle p-2 w-8 h-8 flex items-center justify-center">
+                                            {icons.edit}
+                                        </div>
+                                        <span className="font-medium">Rename</span>
+                                    </button>
+                                    <button
+                                        onClick={(e) => handleDelete(e, doc.id)}
+                                        className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 neu-button rounded-2xl flex items-center space-x-3"
+                                    >
+                                        <div className="neu-circle p-2 w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/20">
+                                            {icons.trash}
+                                        </div>
+                                        <span className="font-medium">Delete</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
       
-      {/* New Note Modal */}
-      {showNewNoteModal && (
+            {/* New Note Modal */}
+            {showNewNoteModal && (
         <>
           {/* Animated background blur overlay */}
           <div 
@@ -624,12 +637,12 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
             }}
           />
           <div 
-            className="fixed z-50 rounded-xl p-6 w-96 max-w-sm border border-white/20 dark:border-gray-300/20" 
+            className={`fixed z-50 rounded-xl p-6 w-96 max-w-sm neu-container ${modalAnimating ? 'neu-raised' : ''}`}
             style={{
               background: 'rgba(255, 255, 255, 0.15)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: modalAnimating ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              boxShadow: modalAnimating ? '0 25px 50px -12px rgba(0, 0, 0, 0.25), 8px 8px 16px rgba(163, 163, 163, 0.2), -8px -8px 16px rgba(255, 255, 255, 0.8)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
               left: modalAnimating ? '50%' : `${buttonPosition.x}px`,
               top: modalAnimating ? '50%' : `${buttonPosition.y}px`,
               transform: modalAnimating ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.1)',
@@ -746,11 +759,11 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
           </div>
         </>
       )}
-    </div>
-  );
+        </div>
+    );
 };
 
-const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDocument }) => {
+const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDocument, onRenameDocument, renamingTitle, setRenamingTitle, titleNewName, setTitleNewName }) => {
     const [activeTab, setActiveTab] = useState('Notes');
     const [isLoading, setIsLoading] = useState(false);
     const [loadingSummary, setLoadingSummary] = useState(false);
@@ -1159,24 +1172,74 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
   };
 
   return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-850 min-w-0 relative">
-            <div className="flex-shrink-0 px-6 pt-4 border-b border-gray-200 dark:border-gray-700 pb-3">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate mr-4">{getDisplayName(docProp.filename)}</h2>
-                    <div className="flex items-center space-x-2 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 shadow-sm flex-shrink-0">
-                        {tabs.map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
-                                {tab}
-            </button>
-          ))}
-        </div>
-      </div>
+        <div className="flex-1 flex flex-col overflow-hidden neu-container neu-raised min-w-0 relative">
+            {/* Sticky Header */}
+            <div className="sticky-header bg-white/95 dark:bg-gray-850/95 sticky top-0 z-20">
+                <div className="flex-shrink-0 px-6 pt-4 pb-3 neu-inset rounded-t-xl sticky-separator">
+                    <div className="flex items-center justify-between">
+                        <div className="flex-1"></div>
+                        <div className="flex-1 flex justify-start">
+                            {renamingTitle ? (
+                                <input
+                                    type="text"
+                                    value={titleNewName}
+                                    onChange={(e) => setTitleNewName(e.target.value)}
+                                    onBlur={() => {
+                                        if (titleNewName.trim()) {
+                                            const extension = docProp.filename.split('.').pop();
+                                            const nameWithoutExt = titleNewName.trim();
+                                            // Don't append .pdf if it's already there
+                                            const newFilename = nameWithoutExt.endsWith(`.${extension}`) 
+                                                ? nameWithoutExt 
+                                                : `${nameWithoutExt}.${extension}`;
+                                            onRenameDocument(docProp.id, newFilename);
+                                        }
+                                        setRenamingTitle(false);
+                                        setTitleNewName('');
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.target.blur();
+                                        } else if (e.key === 'Escape') {
+                                            setRenamingTitle(false);
+                                            setTitleNewName('');
+                                        }
+                                    }}
+                                    className="text-xl font-bold text-gray-900 dark:text-gray-100 bg-transparent neu-inset rounded-lg px-3 py-1 focus:outline-none text-left"
+                                    autoFocus
+                                />
+                            ) : (
+                                <h2 
+                                    onClick={() => {
+                                        setRenamingTitle(true);
+                                        setTitleNewName(getDisplayName(docProp.filename));
+                                    }}
+                                    className="text-xl font-bold text-gray-900 dark:text-gray-100 cursor-pointer neu-button rounded-lg px-3 py-1 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-left"
+                                    title="Click to rename"
+                                >
+                                    {getDisplayName(docProp.filename)}
+                                </h2>
+                            )}
+                        </div>
+                        <div className="flex-1 flex justify-end">
+                            <div className="flex items-center space-x-2 p-1 rounded-xl neu-inset flex-shrink-0 bg-gray-100 dark:bg-gray-700">
+                                {tabs.map(tab => (
+                                    <button key={tab} onClick={() => setActiveTab(tab)}
+                                        className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${activeTab === tab ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}>
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {/* Horizontal Separator */}
+                <div className="border-b border-gray-200 dark:border-gray-700"></div>
             </div>
             <div className="flex-1 overflow-y-auto overflow-x-hidden text-sm min-h-0">
-        {renderContent()}
-      </div>
-    </div>
+                {renderContent()}
+            </div>
+        </div>
   );
 };
 
@@ -1215,6 +1278,8 @@ const App = () => {
   const [isLoadingApp, setIsLoadingApp] = useState(true);
   // eslint-disable-next-line no-unused-vars
   const [appError, setAppError] = useState('');
+  const [renamingTitle, setRenamingTitle] = useState(false);
+  const [titleNewName, setTitleNewName] = useState('');
 
   // Token refresh handler
   const handleTokenRefresh = useCallback((newAccessToken) => {
@@ -1400,7 +1465,10 @@ const App = () => {
         const updatedDocs = documents.map(doc => {
             if (doc.id === docId) {
                 const extension = doc.filename.split('.').pop();
-                const newFilename = `${newName}.${extension}`;
+                // Check if newName already has the extension to prevent duplication
+                const newFilename = newName.endsWith(`.${extension}`) 
+                    ? newName 
+                    : `${newName}.${extension}`;
                 return { ...doc, filename: newFilename };
             }
             return doc;
@@ -1410,7 +1478,10 @@ const App = () => {
         // Update active document if it's the one being renamed
         if (activeDocument?.id === docId) {
             const extension = activeDocument.filename.split('.').pop();
-            const newFilename = `${newName}.${extension}`;
+            // Check if newName already has the extension to prevent duplication
+            const newFilename = newName.endsWith(`.${extension}`) 
+                ? newName 
+                : `${newName}.${extension}`;
             setActiveDocument({ ...activeDocument, filename: newFilename });
         }
     } catch (error) {
@@ -1432,20 +1503,29 @@ const App = () => {
           case 'Notes':
   return (
                   <div className="flex h-full bg-white dark:bg-gray-850 overflow-hidden">
-                <DocumentList
-                  documents={documents}
-                        activeDocument={activeDocument} 
-                        onSelectDocument={setActiveDocument}
-                        onUpload={handleUpload}
-                        onCreateNote={handleCreateNote}
-                        onDeleteDocument={handleDeleteDocument}
-                        onRenameDocument={handleRenameDocument}
-                />
+                <div className="relative">
+                    <DocumentList
+                      documents={documents}
+                            activeDocument={activeDocument} 
+                            onSelectDocument={setActiveDocument}
+                            onUpload={handleUpload}
+                            onCreateNote={handleCreateNote}
+                            onDeleteDocument={handleDeleteDocument}
+                            onRenameDocument={handleRenameDocument}
+                    />
+                </div>
+                {/* Vertical Separator */}
+                <div className="border-l border-gray-200 dark:border-gray-700 flex-shrink-0"></div>
                 <DocumentViewer
                         document={activeDocument} 
                         user={user} 
                         onContentGenerated={handleContentGenerated} 
                         activeDocument={activeDocument}
+                        onRenameDocument={handleRenameDocument}
+                        renamingTitle={renamingTitle}
+                        setRenamingTitle={setRenamingTitle}
+                        titleNewName={titleNewName}
+                        setTitleNewName={setTitleNewName}
                     />
                   </div>
               );
