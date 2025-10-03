@@ -9,11 +9,26 @@ User = get_user_model()
 # ==============================================================================
 class UserSerializer(serializers.ModelSerializer):
     """
-    Serializer for the User model. Excludes sensitive data like the password.
+    Serializer for the User model. Handles user registration with password hashing.
     """
+    password = serializers.CharField(write_only=True, min_length=8)
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'username', 'email', 'password']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+    
+    def create(self, validated_data):
+        """
+        Create a new user with encrypted password.
+        """
+        password = validated_data.pop('password')
+        user = User.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
 
 
 # ==============================================================================

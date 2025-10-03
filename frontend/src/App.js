@@ -234,6 +234,7 @@ const LoginPage = ({ onLogin }) => {
     try {
       if (isSigningUp) {
         await apiClient.signup(username, password, email);
+        // Auto-login after successful signup
         const { access, refresh } = await apiClient.login(username, password);
         onLogin({ access, refresh, username }, rememberMe);
       } else {
@@ -287,8 +288,7 @@ const LoginPage = ({ onLogin }) => {
   );
 };
 
-const Sidebar = ({ activePage, setActivePage }) => {
-    const [isCollapsed, setIsCollapsed] = useState(false);
+const Sidebar = ({ activePage, setActivePage, isCollapsed, setIsCollapsed }) => {
     const navItems = [
         { name: 'Notes', icon: icons.documents },
         { name: 'Settings', icon: icons.settings },
@@ -298,8 +298,8 @@ const Sidebar = ({ activePage, setActivePage }) => {
         <aside className={`${isCollapsed ? 'w-16' : 'w-52'} flex-shrink-0 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-700 p-4 flex flex-col shadow-sm transition-[width] duration-150 ease-out`}>
             <div className="flex items-center justify-between mb-6">
                 {!isCollapsed && <div className="font-bold text-3xl text-gray-900 dark:text-gray-100 pl-3 no-select">Synapse</div>}
-                <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors ml-auto shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400">
+                <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-1.5 ml-auto transition-colors hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -325,7 +325,7 @@ const Sidebar = ({ activePage, setActivePage }) => {
     );
 };
 
-const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, onClearSearch }) => {
+const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, onClearSearch, isCollapsed }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
     const handleSearch = (e) => {
@@ -350,6 +350,10 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
 
   return (
         <header className="flex-shrink-0 h-16 flex items-center justify-between px-6 neu-container neu-inset">
+            {/* Spacer div that adjusts based on sidebar state */}
+            <div className={`${isCollapsed ? 'w-16' : 'w-52'} flex-shrink-0`}></div>
+            
+            {/* Centered search bar */}
             <div className="flex-1 max-w-lg mx-auto">
           <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 dark:text-gray-500">
@@ -363,11 +367,13 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
             />
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+        
+        {/* Right-aligned user controls */}
+        <div className="flex items-center space-x-4 flex-shrink-0">
                 <button onClick={onToggleDarkMode} className="p-3 neu-circle w-12 h-12 flex items-center justify-center text-gray-600 dark:text-gray-300 transition-all">
                     {isDarkMode ? icons.sun : icons.moon}
           </button>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-200 no-select">{username}</span>
+                <span className="text-base font-medium text-gray-700 dark:text-gray-200 no-select">{username}</span>
                 <button onClick={onLogout} className="text-sm px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 transition-colors shadow-md hover:shadow-lg">Logout</button>
         </div>
         </header>
@@ -512,8 +518,8 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                 <div className="px-6 py-3 pr-4 sticky-separator">
                     <div className="flex items-center justify-between mb-3">
                         {!isCollapsed && <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Notes</span>}
-                        <button onClick={() => setIsCollapsed(!isCollapsed)} className={`p-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded transition-colors shadow-md text-gray-700 dark:text-gray-300 ${!isCollapsed ? 'ml-auto' : 'mx-auto'}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <button onClick={() => setIsCollapsed(!isCollapsed)} className={`p-1.5 transition-colors hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded relative ${!isCollapsed ? 'ml-auto' : 'mx-auto'}`} style={{zIndex: 9999}}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors" style={{zIndex: 9999}}>
                                 <line x1="3" y1="12" x2="21" y2="12"></line>
                                 <line x1="3" y1="6" x2="21" y2="6"></line>
                                 <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -590,21 +596,21 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
                                 </button>
                             )}
                             {activeMenu === doc.id && (
-                                <div className="absolute right-0 top-0 mt-10 mr-2 neu-container neu-raised rounded-xl z-10 p-2 min-w-32">
+                                <div className="absolute right-0 top-0 mt-10 mr-2 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 shadow-lg z-50 p-2 min-w-40">
                                     <button
                                         onClick={(e) => handleRename(e, doc)}
-                                        className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 neu-button rounded-2xl flex items-center space-x-3 mb-2"
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center space-x-3 mb-1 transition-colors"
                                     >
-                                        <div className="neu-circle p-2 w-8 h-8 flex items-center justify-center">
+                                        <div className="w-5 h-5 flex items-center justify-center text-gray-600 dark:text-gray-400">
                                             {icons.edit}
                                         </div>
                                         <span className="font-medium">Rename</span>
                                     </button>
                                     <button
                                         onClick={(e) => handleDelete(e, doc.id)}
-                                        className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 neu-button rounded-2xl flex items-center space-x-3"
+                                        className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center space-x-3 transition-colors"
                                     >
-                                        <div className="neu-circle p-2 w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/20">
+                                        <div className="w-5 h-5 flex items-center justify-center text-red-600 dark:text-red-400">
                                             {icons.trash}
                                         </div>
                                         <span className="font-medium">Delete</span>
@@ -1270,6 +1276,7 @@ const App = () => {
   const [documents, setDocuments] = useState([]);
   const [activeDocument, setActiveDocument] = useState(null);
   const [activePage, setActivePage] = useState('Notes');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLoadingApp, setIsLoadingApp] = useState(true);
   // eslint-disable-next-line no-unused-vars
@@ -1311,11 +1318,16 @@ const App = () => {
     apiClient.getDocuments(currentUser)
       .then(docs => {
         setDocuments(prevDocs => {
-          // Preserve local status clearing (null status) if document was previously completed
+          // On initial load (no previous docs), set all completed documents to null status
+          const isInitialLoad = prevDocs.length === 0;
           return docs.map(doc => {
             const prevDoc = prevDocs.find(d => d.id === doc.id);
             // If we previously cleared the status (set to null), don't override with 'completed' from API
             if (prevDoc && prevDoc.status === null && doc.status === 'completed') {
+              return { ...doc, status: null };
+            }
+            // On initial load, don't show completed status to avoid mass green flash
+            if (isInitialLoad && doc.status === 'completed') {
               return { ...doc, status: null };
             }
             return doc;
@@ -1336,17 +1348,23 @@ const App = () => {
       });
   }, []); // No dependencies - use functional updates instead
 
-  // Hook to poll for document status updates
+  // Hook to poll for document status updates and content generation
   useEffect(() => {
     if (!user || activePage !== 'Notes') return;
 
+    // Poll when there are processing documents OR when we have an active document
+    // (to catch content generation that doesn't change document status)
     const processingDocs = documents.some(doc => doc.status === 'processing');
-    if (!processingDocs) return;
+    const hasActiveDocument = activeDocument !== null;
+    
+    if (!processingDocs && !hasActiveDocument) return;
 
-    const interval = setInterval(() => fetchDocuments(user), 5000); 
+    // Use a shorter interval when we have an active document to catch content updates faster
+    const pollInterval = hasActiveDocument ? 3000 : 5000;
+    const interval = setInterval(() => fetchDocuments(user), pollInterval); 
 
     return () => clearInterval(interval);
-  }, [documents, user, activePage, fetchDocuments]);
+  }, [documents, user, activePage, activeDocument, fetchDocuments]);
 
   useEffect(() => {
     const darkModeSaved = localStorage.getItem('darkMode') === 'true';
@@ -1565,7 +1583,7 @@ const App = () => {
 
   return (
     <div className={`flex h-screen w-screen font-sans text-gray-900 bg-gray-100 dark:bg-gray-950 transition-colors overflow-hidden`}>
-        <Sidebar activePage={activePage} setActivePage={setActivePage} />
+        <Sidebar activePage={activePage} setActivePage={setActivePage} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <Header 
                 username={user.username} 
@@ -1574,6 +1592,7 @@ const App = () => {
                 onToggleDarkMode={handleToggleDarkMode}
                 onSearch={(query) => apiClient.searchDocuments(user, query).then(setDocuments)}
                 onClearSearch={() => fetchDocuments(user)}
+                isCollapsed={isCollapsed}
               />
             <div className="flex-1 overflow-hidden p-4 bg-gray-50 dark:bg-gray-950 min-h-0">
                 <div className="h-full w-full bg-white dark:bg-gray-850 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
