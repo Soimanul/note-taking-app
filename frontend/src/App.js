@@ -360,7 +360,15 @@ const Header = ({ username, onLogout, isDarkMode, onToggleDarkMode, onSearch, on
                         {icons.search}
                     </div>
                     <input type="search" placeholder="Semantic Search..." 
-                           className="w-full pl-12 pr-4 py-1.5 rounded-xl neu-inset bg-gray-100 dark:bg-gray-950 text-left text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-all focus:outline-none border border-gray-300 dark:border-gray-600"
+className="w-full pl-12 pr-4 py-1.5 rounded-xl neu-inset
+  bg-white dark:bg-gray-900
+  text-gray-800 dark:text-gray-100
+  placeholder-gray-400 dark:placeholder-gray-500
+  border border-gray-200 dark:border-gray-700
+  transition-all focus:outline-none
+  hover:bg-gray-50 dark:hover:bg-gray-800
+  focus:ring-2 focus:ring-black dark:focus:ring-white"
+
               value={searchQuery}
                            onChange={handleInputChange}
                            onKeyDown={handleSearch}
