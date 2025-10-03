@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /* TRUE neutral gray scale (no color tint) - Light mode defaults */
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #737373;
+  --color-gray-600: #525252;
+  --color-gray-700: #404040;
+  --color-gray-800: #262626;
+  --color-gray-850: #1a1a1a;
+  --color-gray-900: #171717;
+  --color-gray-950: #0a0a0a;
+}
+
+/* Dark mode palette overrides: ensure neutral greys (no blue tint) */
+@layer base {
+  body {
+    @apply bg-gray-100 text-gray-900;
+  }
+  .dark body {
+    @apply bg-gray-950 text-gray-100;
+  }
+  
+  /* Custom scrollbar styles - Light mode */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 6px;
+    border: 3px solid #f5f5f5;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+  }
+  
+  /* Custom scrollbar styles - Dark mode */
+  .dark ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 6px;
+    border: 3px solid #0a0a0a;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #525252;
+  }
+  
+  /* Firefox scrollbar styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+  }
+  
+  .dark * {
+    scrollbar-color: #404040 transparent;
+  }
+  .dark {
+    --color-gray-50: #fafafa;
+    --color-gray-100: #f5f5f5;
+    --color-gray-200: #e5e5e5;
+    --color-gray-300: #d4d4d4;
+    --color-gray-400: #a3a3a3;
+    --color-gray-500: #737373;
+    --color-gray-600: #525252;
+    --color-gray-700: #404040;
+    --color-gray-800: #262626;
+    --color-gray-850: #1a1a1a;
+    --color-gray-900: #171717;
+    --color-gray-950: #0a0a0a;
+  }
+}
+
+/* Typography base styles for ReactMarkdown content - Force neutral colors */
+.prose {
+  max-width: none;
+  color: #171717;
+}
+
+.dark .prose {
+  color: #f5f5f5;
+}
+
+.prose h1, 
+.prose h2, 
+.prose h3, 
+.prose h4, 
+.prose h5, 
+.prose h6 {
+  font-weight: 600;
+  color: #171717 !important;
+}
+
+.dark .prose h1,
+.dark .prose h2,
+.dark .prose h3,
+.dark .prose h4,
+.dark .prose h5,
+.dark .prose h6 {
+  color: #f5f5f5 !important;
+}
+
+.prose p {
+  color: #262626;
+}
+
+.dark .prose p {
+  color: #d4d4d4;
+}
+
+.prose a {
+  color: #404040;
+  text-decoration: underline;
+}
+
+.dark .prose a {
+  color: #d4d4d4;
+}
+
+.prose strong {
+  font-weight: 700;
+  color: #171717;
+}
+
+.dark .prose strong {
+  color: #f5f5f5;
+}
+
+.prose code {
+  color: #171717;
+  background-color: #e5e5e5;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.dark .prose code {
+  color: #f5f5f5;
+  background-color: #262626;
+}
+
+.prose ul, 
+.prose ol {
+  color: #262626;
+}
+
+.dark .prose ul,
+.dark .prose ol {
+  color: #d4d4d4;
+}
