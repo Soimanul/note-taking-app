@@ -3,87 +3,12 @@ from abc import ABC, abstractmethod
 from celery import shared_task
 import fitz
 import docx
-import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
-import pinecone
 from .models import Document, GeneratedContent, Log
+from . import services
 
 
 # ==============================================================================
-#  1. Adapter Pattern for Gen AI Services
-# ==============================================================================
-class GenerativeAIAdapter(ABC):
-    """
-    Abstract interface for a generative AI service adapter.
-    """
-
-    @abstractmethod
-    def generate_summary(self, text: str) -> str:
-        """
-        Generates a summary for the given text.
-        """
-
-        pass
-
-
-class GeminiAdapter(GenerativeAIAdapter):
-    """
-    Adapter for the Google Gemini API.
-    """
-
-    def __init__(self):
-        try:
-            api_key = os.environ.get("GOOGLE_API_KEY")
-            if not api_key:
-                raise ValueError("GOOGLE_API_KEY environment variable not set.")
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
-            print("Gemini Adapter initialized successfully.")
-        except Exception as e:
-            self.model = None
-            print(f"Error initializing Gemini Adapter: {e}")
-
-    def generate_summary(self, text: str) -> str:
-        if not self.model:
-            raise ConnectionError("Gemini model is not initialized.")
-        prompt = (
-            f"Please provide a concise summary of the following document:\n\n{text}"
-        )
-        response = self.model.generate_content(prompt)
-        return response.text
-
-
-def get_ai_adapter() -> GenerativeAIAdapter:
-    """
-    Factory function to get the configured AI adapter.
-    """
-
-    # For now, it's hardcoded to Gemini but it could be easily expaneded to choose another api.
-    return GeminiAdapter()
-
-
-# ==============================================================================
-#  2. Initialize other AI Clients (Embeddings & Vector DB)
-# ==============================================================================
-try:
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    # Pinecone Vector DB
-    pinecone_api_key = os.environ.get("PINECONE_API_KEY")
-    if not pinecone_api_key:
-        raise ValueError("PINECONE_API_KEY not set.")
-    pc = pinecone.Pinecone(api_key=pinecone_api_key)
-    pinecone_index = pc.Index("documents")
-
-    print("Embedding model and Pinecone client initialized successfully.")
-except Exception as e:
-    print(f"Error initializing AI clients: {e}")
-    embedding_model = None
-    pinecone_index = None
-
-
-# ==============================================================================
-#  3. Strategy Pattern for file parsing
+#  1. Strategy Pattern for file parsing
 # ==============================================================================
 class ParserStrategy(ABC):
     """
@@ -95,6 +20,7 @@ class ParserStrategy(ABC):
         """
         Reads a file and returns its text content.
         """
+
         pass
 
 
@@ -154,62 +80,67 @@ def get_parser(filetype: str) -> ParserStrategy:
 
 
 # ==============================================================================
-#  4. Main Celery Task for Document Processing
+#  2. Helper Functions for the Main Task
+# ==============================================================================
+def _generate_and_save_notes(document: Document, text: str):
+    """Generates structured notes and saves them to the database."""
+    print("Generating structured notes...")
+    notes_text = services.ai_adapter.generate_notes(text)
+    GeneratedContent.objects.create(
+        document=document,
+        contentType="notes",
+        contentData={"markdown_text": notes_text},
+    )
+    print("Notes generated and saved.")
+
+
+def _generate_and_upsert_embedding(document: Document, text: str):
+    """Generates an embedding and upserts it to Pinecone."""
+    print("Generating embeddings...")
+    embedding = services.embedding_model.encode(text).tolist()
+    print(f"Embedding generated with dimension: {len(embedding)}")
+
+    print("Upserting vector to Pinecone...")
+    services.pinecone_index.upsert(
+        vectors=[
+            {
+                "id": str(document.id),
+                "values": embedding,
+                "metadata": {"user_id": str(document.user.id)},
+            }
+        ]
+    )
+    print("Vector upserted successfully.")
+
+
+# ==============================================================================
+#  3. Main Celery Task for Document Processing
 # ==============================================================================
 @shared_task
 def process_document(document_id):
     """
-    Asynchronous task to process an uploaded document, generate AI content,
-    and create embeddings.
+    Orchestrates the initial document processing workflow:
+    1. Parses text.
+    2. Generates structured notes.
+    3. Creates and stores an embedding.
     """
-
-    ai_adapter = get_ai_adapter()
-    if not all([ai_adapter, embedding_model, pinecone_index]):
-        raise ConnectionError(
-            "AI services are not initialized. Check API keys and configuration."
-        )
+    if not all(
+        [services.ai_adapter, services.embedding_model, services.pinecone_index]
+    ):
+        raise ConnectionError("AI services are not initialized.")
 
     try:
         doc = Document.objects.get(id=document_id)
 
-        # Parse the text using the Strategy pattern
-        print(f"Starting to parse file: {doc.filename}")
         parser = get_parser(doc.fileType)
         extracted_text = parser.parse(doc.filepath)
         print(
             f"File parsed successfully. Text length: {len(extracted_text)} characters."
         )
 
-        # Generate the summary using the Adapter pattern
-        print("Generating summary...")
-        summary_text = ai_adapter.generate_summary(extracted_text)
+        _generate_and_save_notes(doc, extracted_text)
+        _generate_and_upsert_embedding(doc, extracted_text)
 
-        GeneratedContent.objects.create(
-            document=doc,
-            contentType="summary",
-            contentData={"markdown_text": summary_text},
-        )
-        print("Summary generated and saved.")
-
-        # Generate embeddings
-        print("Generating embeddings...")
-        embedding = embedding_model.encode(extracted_text).tolist()
-        print(f"Embedding generated with dimension: {len(embedding)}")
-
-        # Save them to Pinecone
-        print("Upserting vector to Pinecone...")
-        pinecone_index.upsert(
-            vectors=[
-                {
-                    "id": str(doc.id),
-                    "values": embedding,
-                    "metadata": {"user_id": str(doc.user.id)},
-                }
-            ]
-        )
-        print("Vector upserted successfully.")
-
-        # 5. Suuccess state
         doc.status = "completed"
         doc.save()
         Log.objects.create(
@@ -233,3 +164,93 @@ def process_document(document_id):
             message=f'Processing failed for "{doc.filename}": {str(e)}',
         )
         print(f"Processing failed for document {document_id}: {str(e)}")
+
+
+# ==============================================================================
+#  On-Demand Celery Tasks
+# ==============================================================================
+@shared_task
+def generate_summary_from_notes(document_id):
+    """
+    Takes the existing 'notes' for a document and generates a new 'summary' object.
+    """
+    try:
+        # Get the original doc and its notes
+        doc = Document.objects.get(id=document_id)
+        notes_content = GeneratedContent.objects.get(document=doc, contentType="notes")
+        notes_text = notes_content.contentData.get("markdown_text", "")
+
+        if not notes_text:
+            raise ValueError("Could not find notes to summarize.")
+
+        # Call the AI adapter to generate the summary
+        print(f"Generating summary for document: {doc.filename}")
+        summary_text = services.ai_adapter.generate_summary(notes_text)
+
+        # Create a new GeneratedContent object for the summary
+        GeneratedContent.objects.create(
+            document=doc,
+            contentType="summary",
+            contentData={"markdown_text": summary_text},
+        )
+        print("New summary object created successfully.")
+        Log.objects.create(
+            user=doc.user,
+            document=doc,
+            level="INFO",
+            message="Summary generated successfully.",
+        )
+
+    except (Document.DoesNotExist, GeneratedContent.DoesNotExist):
+        print(f"Could not find document or notes for document_id: {document_id}")
+    except Exception as e:
+        print(f"Failed to generate summary for document {document_id}: {str(e)}")
+        doc, _ = Document.objects.update_or_create(id=document_id, defaults={})
+        Log.objects.create(
+            user=doc.user,
+            document=doc,
+            level="ERROR",
+            message=f"Summary generation failed: {str(e)}",
+        )
+
+
+@shared_task
+def generate_quiz_from_notes(document_id):
+    """
+    Takes existing notes for a document and generates a new quiz object.
+    """
+    try:
+        # Get the original doc and its notes
+        doc = Document.objects.get(id=document_id)
+        notes_content = GeneratedContent.objects.get(document=doc, contentType="notes")
+        notes_text = notes_content.contentData.get("markdown_text", "")
+
+        if not notes_text:
+            raise ValueError("Could not find notes to generate quiz from.")
+
+        print(f"Generating quiz for document: {doc.filename}")
+        quiz_data = services.ai_adapter.generate_quiz(notes_text)
+
+        # Create a new GenerateddContent for the quiz
+        GeneratedContent.objects.create(
+            document=doc, contentType="quiz", contentData=quiz_data
+        )
+        print("New quiz object created successfully.")
+        Log.objects.create(
+            user=doc.user,
+            document=doc,
+            level="INFO",
+            message="Quiz generated successfully.",
+        )
+
+    except (Document.DoesNotExist, GeneratedContent.DoesNotExist):
+        print(f"Could not find document or notes for document_id: {document_id}")
+    except Exception as e:
+        print(f"Failed to generate quiz for document {document_id}: {str(e)}")
+        doc, _ = Document.objects.update_or_create(id=document_id, defaults={})
+        Log.objects.create(
+            user=doc.user,
+            document=doc,
+            level="ERROR",
+            message=f"Quiz generation failed: {str(e)}",
+        )
