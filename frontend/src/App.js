@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react';
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/core/fonts/inter.css";
@@ -392,7 +391,6 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [activeMenu, setActiveMenu] = useState(null);
     const [renamingDoc, setRenamingDoc] = useState(null);
-    const [renamingTitle, setRenamingTitle] = useState(false);
     const [newName, setNewName] = useState('');
     const [showNewNoteModal, setShowNewNoteModal] = useState(false);
     const [modalAnimating, setModalAnimating] = useState(false);
@@ -423,10 +421,6 @@ const DocumentList = ({ documents, activeDocument, onSelectDocument, onUpload, o
             setModalAnimating(false);
         }
     }, [showNewNoteModal, modalAnimating]);
-
-    const handleUploadClick = () => {
-        fileInputRef.current.click();
-    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -783,11 +777,15 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
     const [originalContent, setOriginalContent] = useState('');
     const [markdownContent, setMarkdownContent] = useState('');
     const [summaryContent, setSummaryContent] = useState('');
-    const [quizContent, setQuizContent] = useState('');
+    const [quizContent, setQuizContent] = useState(null);
     const [isDarkMode, setIsDarkMode] = useState(false);
     
+    // Refs to track previous content for comparison
+    const prevSummaryContentRef = useRef('');
+    const prevQuizContentRef = useRef(null);
+    
     // The active document now holds its own generated content
-    const generatedContent = docProp?.generated_content || [];
+    const generatedContent = useMemo(() => docProp?.generated_content || [], [docProp?.generated_content]);
     
     // Create BlockNote editor instances FIRST
     const notesEditor = useCreateBlockNote({
@@ -827,7 +825,7 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
                 // Clear all content states when switching documents
                 setMarkdownContent('');
                 setSummaryContent('');
-                setQuizContent('');
+                setQuizContent(null);
                 setOriginalContent('');
                 
                 // Clear the editors
@@ -854,7 +852,7 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
         // Always update content to match the current document
         const newNotesContent = notes?.contentData?.markdown_text || '';
         const newSummaryContent = summary?.contentData?.markdown_text || '';
-        const newQuizContent = quiz?.contentData?.markdown_text || '';
+        const newQuizContent = quiz?.contentData || null;
         
         // Debug logging
         console.log('Content update for doc:', docProp?.id, {
@@ -863,25 +861,29 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
             hasQuiz: !!quiz,
             summaryLength: newSummaryContent.length,
             generatedContentCount: generatedContent.length,
-            prevSummaryLength: summaryContent.length,
-            prevQuizLength: quizContent.length
+            prevSummaryLength: prevSummaryContentRef.current.length,
+            prevQuizLength: prevQuizContentRef.current ? Object.keys(prevQuizContentRef.current).length : 0
         });
         
         // Clear loading states when new content appears
-        if (newSummaryContent && newSummaryContent !== summaryContent && loadingSummary) {
+        if (newSummaryContent && newSummaryContent !== prevSummaryContentRef.current && loadingSummary) {
             console.log('New summary content detected, clearing loading state');
             setLoadingSummary(false);
         }
         
-        if (newQuizContent && newQuizContent !== quizContent && loadingQuiz) {
+        if (newQuizContent && JSON.stringify(newQuizContent) !== JSON.stringify(prevQuizContentRef.current) && loadingQuiz) {
             console.log('New quiz content detected, clearing loading state');
             setLoadingQuiz(false);
         }
         
+        // Update refs with new values
+        prevSummaryContentRef.current = newSummaryContent;
+        prevQuizContentRef.current = newQuizContent;
+        
         setMarkdownContent(newNotesContent);
         setSummaryContent(newSummaryContent);
         setQuizContent(newQuizContent);
-    }, [generatedContent, docProp?.id, summaryContent, quizContent, loadingSummary, loadingQuiz]);
+    }, [generatedContent, docProp?.id, loadingSummary, loadingQuiz]);
     
     // Load content into editors when it changes
     useEffect(() => {
@@ -916,10 +918,104 @@ const DocumentViewer = ({ document: docProp, user, onContentGenerated, activeDoc
         if (quizEditor && quizContent) {
             async function loadQuiz() {
                 try {
-                    const blocks = await quizEditor.tryParseMarkdownToBlocks(quizContent);
+                    // Convert JSON quiz data to BlockNote blocks
+                    const blocks = [];
+                    
+                    // Add title
+                    blocks.push({
+                        type: "heading",
+                        props: { level: 1 },
+                        content: [{ type: "text", text: "Quiz" }],
+                    });
+                    
+                    // Add multiple choice questions
+                    if (quizContent.multiple_choice && quizContent.multiple_choice.length > 0) {
+                        blocks.push({
+                            type: "heading",
+                            props: { level: 2 },
+                            content: [{ type: "text", text: "Multiple Choice Questions" }],
+                        });
+                        
+                        quizContent.multiple_choice.forEach((q, index) => {
+                            // Question
+                            blocks.push({
+                                type: "paragraph",
+                                content: [{ 
+                                    type: "text", 
+                                    text: `${index + 1}. ${q.question}`,
+                                    styles: { bold: true }
+                                }],
+                            });
+                            
+                            // Options
+                            q.options.forEach((option, optIndex) => {
+                                const isCorrect = optIndex === q.correct_answer_index;
+                                blocks.push({
+                                    type: "paragraph",
+                                    content: [{
+                                        type: "text",
+                                        text: `   ${String.fromCharCode(65 + optIndex)}. ${option}`,
+                                        styles: isCorrect ? { bold: true, textColor: "green" } : {}
+                                    }],
+                                });
+                            });
+                            
+                            // Add spacing
+                            blocks.push({
+                                type: "paragraph",
+                                content: [],
+                            });
+                        });
+                    }
+                    
+                    // Add fill-in-the-blanks questions
+                    if (quizContent.fill_in_the_blanks && quizContent.fill_in_the_blanks.length > 0) {
+                        blocks.push({
+                            type: "heading",
+                            props: { level: 2 },
+                            content: [{ type: "text", text: "Fill in the Blanks" }],
+                        });
+                        
+                        quizContent.fill_in_the_blanks.forEach((q, index) => {
+                            blocks.push({
+                                type: "paragraph",
+                                content: [{ 
+                                    type: "text", 
+                                    text: `${index + 1}. ${q.question}`,
+                                    styles: { bold: true }
+                                }],
+                            });
+                            
+                            blocks.push({
+                                type: "paragraph",
+                                content: [{
+                                    type: "text",
+                                    text: `   Answer: ${q.answer}`,
+                                    styles: { bold: true, textColor: "green" }
+                                }],
+                            });
+                            
+                            // Add spacing
+                            blocks.push({
+                                type: "paragraph",
+                                content: [],
+                            });
+                        });
+                    }
+                    
                     quizEditor.replaceBlocks(quizEditor.document, blocks);
                 } catch (error) {
-                    console.error('Failed to parse quiz markdown:', error);
+                    console.error('Failed to parse quiz JSON:', error);
+                    // Fallback: display raw JSON as code block
+                    const fallbackBlocks = [{
+                        type: "paragraph",
+                        content: [{ type: "text", text: "Quiz data (JSON format):" }],
+                    }, {
+                        type: "codeBlock",
+                        props: { language: "json" },
+                        content: [{ type: "text", text: JSON.stringify(quizContent, null, 2) }],
+                    }];
+                    quizEditor.replaceBlocks(quizEditor.document, fallbackBlocks);
                 }
             }
             loadQuiz();
@@ -1392,6 +1488,11 @@ const App = () => {
   }, [user, fetchDocuments]);
   
   // Auto-clear completed status after 3 seconds and revert to normal
+  const documentsStatusKey = useMemo(() => 
+    documents.map(d => d.id + d.status).join(','), 
+    [documents]
+  );
+  
   useEffect(() => {
     const completedDocs = documents.filter(doc => doc.status === 'completed');
     if (completedDocs.length > 0) {
@@ -1408,7 +1509,7 @@ const App = () => {
       });
       return () => timers.forEach(timer => clearTimeout(timer));
     }
-  }, [documents.map(d => d.id + d.status).join(',')]); // Only trigger when status actually changes
+  }, [documentsStatusKey, documents]);
   
   // Use useLayoutEffect for instant, synchronous DOM updates BEFORE paint
   useLayoutEffect(() => {
