@@ -167,7 +167,7 @@ def process_document(document_id):
 
 
 # ==============================================================================
-#  On-Demand Celery Tasks
+#  4. On-Demand Celery Tasks
 # ==============================================================================
 @shared_task
 def generate_summary_from_notes(document_id):

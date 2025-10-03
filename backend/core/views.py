@@ -11,6 +11,29 @@ from .serializers import DocumentSerializer, UserSerializer
 from .tasks import process_document
 
 # ==============================================================================
+#  -1. Helper Functions
+# ==============================================================================
+
+
+def _save_uploaded_file(uploaded_file: UploadedFile) -> dict:
+    """
+    Saves the uploaded file to the local filesystem and returns its metadata.
+    """
+
+    fs = FileSystemStorage(location="media/uploads/")
+    filename = fs.get_available_name(uploaded_file.name)
+    saved_path = fs.save(filename, uploaded_file)
+    filepath = os.path.abspath(fs.path(saved_path))
+
+    return {
+        "filename": uploaded_file.name,
+        "filepath": filepath,
+        "fileType": os.path.splitext(uploaded_file.name)[1].lower().strip("."),
+        "size": uploaded_file.size,
+    }
+
+
+# ==============================================================================
 # 0. Custom Permissions
 # ==============================================================================
 class IsOwner(permissions.BasePermission):
@@ -56,44 +79,32 @@ class DocumentListCreate(generics.ListCreateAPIView):
         """
         This view should only return documents owned by the currently authenticated user.
         """
+
         return Document.objects.filter(user=self.request.user).order_by("-uploadDate")
 
     def create(self, request, *args, **kwargs):
         """
-        Overries  default create method to handle file upload, save its metadata, and triggerthe assync processing task
+        1. Saves the file.
+        2. Creates the database record.
+        3. Triggers the async processing task.        
         """
-        uploaded_file = request.FILES.get("file")
-        if not uploaded_file:
-            return Response(
-                {"detail": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
+        
         # Save the file locally
-        fs = FileSystemStorage(location="media/uploads/")
-        filename = fs.get_available_name(uploaded_file.name)
-        saved_path = fs.save(filename, uploaded_file)
-        filepath = os.path.abspath(fs.path(saved_path))
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({"detail": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Prepare the data for the serializer
-        data_for_serializer = {
-            "filename": uploaded_file.name,
-            "filepath": filepath,
-            "fileType": os.path.splitext(uploaded_file.name)[1].lower().strip("."),
-            "size": uploaded_file.size,
-        }
-
-        serializer = self.get_serializer(data=data_for_serializer)
+        file_metadata = _save_uploaded_file(uploaded_file)
+        
+        serializer = self.get_serializer(data=file_metadata)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-
+        
         new_document_id = serializer.instance.id
-
         process_document.delay(str(new_document_id))
 
         headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         """
@@ -118,4 +129,5 @@ class DocumentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
         """
         This view should only return documents owned by the currently authenticated user.
         """
+
         return Document.objects.filter(user=self.request.user)
