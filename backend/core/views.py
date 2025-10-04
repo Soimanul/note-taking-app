@@ -24,8 +24,12 @@ def _save_uploaded_file(uploaded_file: UploadedFile) -> dict:
     """
     Saves the uploaded file to the local filesystem and returns its metadata.
     """
-
-    fs = FileSystemStorage(location="media/uploads/")
+    
+    # Ensure the media/uploads directory exists
+    upload_dir = "media/uploads/"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    fs = FileSystemStorage(location=upload_dir)
     filename = fs.get_available_name(uploaded_file.name)
     saved_path = fs.save(filename, uploaded_file)
     filepath = os.path.abspath(fs.path(saved_path))
@@ -145,6 +149,19 @@ class DocumentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def perform_destroy(self, instance):
+        """
+        Delete to clean up associated files and ensure cascade deletion.
+        """
+        
+        if instance.filepath and os.path.exists(instance.filepath):
+            try:
+                os.remove(instance.filepath)
+            except OSError:
+                pass 
+        
+        instance.delete()
 
     def get_queryset(self):
         """
