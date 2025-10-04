@@ -16,13 +16,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
+def health_check(request):
+    return JsonResponse({"status": "healthy", "service": "note-taking-app"})
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Health check endpoint
+    path('api/health/', health_check, name='health_check'),
     
     # API URLs
     path('api/', include('core.urls')),

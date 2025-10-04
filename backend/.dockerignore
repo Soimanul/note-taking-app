@@ -11,9 +11,32 @@ env
 
 # Testing artifacts
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Development files
+*.log
+.env
+.env.local
+.env.template
 
 # IDE and OS files
 .vscode/
 .idea/
 .DS_Store
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Static files (will be collected during build)
+staticfiles/
+static/
+
+# Media files (should be handled by volumes)
+media/
 
