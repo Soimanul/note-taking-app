@@ -65,5 +65,10 @@
     "@tailwindcss/typography": "^0.5.19",
     "concurrently": "^9.2.1",
     "tailwindcss": "^4.1.14"
+  },
+  "overrides": {
+    "nth-check": ">=2.0.1",
+    "postcss": ">=8.4.31",
+    "webpack-dev-server": "^4.15.2"
   }
 }

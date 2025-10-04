@@ -45,37 +45,61 @@ class GeminiAdapter(GenerativeAIAdapter):
         Uses a detailed prompt to transform raw text into well-structured
         educational notes in Markdown format.
         """
+
         if not self.model:
             raise ConnectionError("Gemini model is not initialized.")
 
         prompt = f"""
-        You are an expert AI note-taking assistant for high-level material. 
-        Your task is to take the following raw text from a document and transform it into clear, concise, and well-organized notes formatted in Markdown.
+        You are an expert AI note-taking assistant for complex and high-level material. 
+        Your task is to transform the following raw text into clear, structured, and insightful notes written in **pure Markdown** compatible with BlockNote (React).
 
-        Please adhere to the following structure and guidelines:
-        1.  **Organize Content:** Create a logical structure with main topics and subtopics using Markdown headings (#, ##, ###).
-        2.  **Improve Readability:** Use bullet points, numbered lists, and indentation.
-        3.  **Highlight Key Information:** Emphasize key concepts, definitions, and important facts in **bold**.
-        4.  **Simplify:** Create brief, easy-to-understand explanations for complex ideas.
-        5.  **Engage:** Generate a few thought-provoking questions related to the material to stimulate critical thinking.
-        6.  **Suggest Examples:** Propose relevant real-world examples or applications of the concepts.
-        7.  **Identify Gaps:** Flag any areas that seem unclear or may require further research.
-        8.  **Provide a Glossary:** At the end, create a 'Glossary' section for new terms introduced in the text.
-        9.  **Main Takeaways:** Conclude with a 'Main Takeaways' section summarizing the most critical points.
+        Output Rules:
+        - **Return only the Markdown content.** No explanations, commentary, or text like “Here’s the revised version.”
+        - **No indentation guides, code fences around the entire response, or extra spaces before headings.**
+        - **Use fenced code blocks properly** (with triple backticks and language identifiers like ` ```python `, ` ```javascript `, etc.) when the source text contains code snippets.
+        - Ensure all code blocks are syntactically valid and consistently formatted.
 
-        Here is the document text:
+        Formatting & Content Guidelines:
+        1. **Logical Structure:** Organize the material using Markdown headings (`##`, `###`, `####`), starting with `##` for top-level sections.
+        2. **Readability:** Use bullet points, numbered lists, and spacing for clarity.
+        3. **Highlight Key Concepts:** Use **bold** for definitions, keywords, and essential facts.
+        4. **Simplify:** Rewrite dense or technical language into concise, accessible explanations.
+        5. **Questions for Reflection:** Include a section titled **"Questions for Reflection"** with 3–5 thoughtful questions.
+        6. **Examples & Applications:** Provide a section titled **"Examples & Applications"** with relevant real-world or practical examples.
+        7. **Further Research Needed:** Add a section listing unclear or incomplete areas.
+        8. **Glossary:** Define new or important terms in a **"Glossary"** section.
+        9. **Main Takeaways:** End with a **"Main Takeaways"** section summarizing key points.
+
+        Document text:
         ---
         {text}
         ---
+
         """
         response = self.model.generate_content(prompt)
         return response.text
 
     def generate_summary(self, text: str) -> str:
-        """Takes existing text (like notes) and generates a simple summary."""
+        """
+        Takes existing text (like notes) and generates a simple summary.
+        """
+
         if not self.model:
             raise ConnectionError("Gemini model is not initialized.")
-        prompt = f"Please provide a concise, one-paragraph summary of the following notes:\n\n{text}"
+        prompt = f"""You are an expert summarization assistant. Read the following notes carefully and produce a clear, cohesive, and well-structured summary formatted in **Markdown**.
+        Your summary must:
+        - Adapt its **length, structure, and level of detail** to the size and complexity of the notes.
+        - Use **multiple paragraphs** when appropriate for clarity and logical flow.
+        - Optionally use **Markdown headings** (##, ###) to separate major themes or sections when the material is extensive.
+        - Preserve key ideas, relationships, and conclusions while removing redundancy and minor details.
+        - Use **concise, natural, and professional language**.
+        - Avoid meta commentary or phrases like “Here is the summary.”
+
+        Here are the notes to summarize:
+        ---
+        {text}
+        ---
+        """
         response = self.model.generate_content(prompt)
         return response.text
 
@@ -84,27 +108,47 @@ class GeminiAdapter(GenerativeAIAdapter):
         Uses a detailed prompt to generate a quiz with multiple choice and
         fill-in-the-blank questions, returning a structured JSON object.
         """
+
         if not self.model:
             raise ConnectionError("Gemini model is not initialized.")
 
         prompt = f"""
-        You are an AI designed to create educational quizzes. Based on the following notes, generate a quiz in a valid JSON format.
+        You are an AI designed to create educational quizzes. Based on the following notes, generate a quiz in **valid JSON format**.
+        The JSON object must contain **three top-level keys**:  
+        1. `"multiple_choice"`  
+        2. `"fill_in_the_blanks"`  
+        3. `"answer_key"`
 
-        The JSON object must have two top-level keys: "multiple_choice" and "fill_in_the_blanks".
+        ### Structure and Rules
 
-        1.  **"multiple_choice"**: This should be a list containing exactly 20 question objects. Each object must have three keys:
-            - "question": A string containing the question text.
-            - "options": A list of exactly 4 strings representing the possible answers.
-            - "correct_answer_index": An integer (0, 1, 2, or 3) indicating the index of the correct answer in the "options" list.
+        #### 1. "multiple_choice"
+        - Must be a **list of exactly 20 objects**.
+        - Each object must contain:
+        - `"question"`: A string with the question text.
+        - `"options"`: A list of **exactly 4 strings** representing possible answers.
+        - `"correct_answer_index"`: An integer (0–3) indicating the index of the correct answer in `"options"`.
 
-        2.  **"fill_in_the_blanks"**: This should be a list containing exactly 5 question objects. Each object must have two keys:
-            - "question": A string containing a sentence with a blank space indicated by "____".
-            - "answer": A string containing the correct word or phrase that fills the blank.
+        #### 2. "fill_in_the_blanks"
+        - Must be a **list of exactly 5 objects**.
+        - Each object must contain:
+        - `"question"`: A string with a blank space shown as `"____"`.
+        - `"answer"`: A string with the correct word or phrase that fills the blank.
+
+        #### 3. "answer_key"
+        - Must be an object containing:
+        - `"multiple_choice"`: A list of the correct answers (as text, *not indices*) corresponding to each question in `"multiple_choice"`.
+        - `"fill_in_the_blanks"`: A list of the correct answers (as text) corresponding to each question in `"fill_in_the_blanks"`.
+
+        ### Output Rules
+        - **Return only valid JSON** — no commentary, explanations, or additional text.
+        - **Do not bold, italicize, or stylize any answers.**
+        - Ensure the JSON is syntactically correct and ready for direct parsing.
 
         Here are the notes to base the quiz on:
         ---
         {text}
         ---
+
         """
 
         generation_config = genai.types.GenerationConfig(

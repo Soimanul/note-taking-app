@@ -26,6 +26,9 @@ COPY . .
 # Collect static files
 RUN python manage.py collectstatic --noinput --settings=config.settings
 
+# Create media directory and set permissions
+RUN mkdir -p /app/media/uploads
+
 # Create a non-root user
 RUN adduser --disabled-password --gecos '' appuser
 RUN chown -R appuser:appuser /app

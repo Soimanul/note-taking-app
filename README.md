@@ -1,7 +1,7 @@
 # 📝 Synapse - AI-Powered Note Taking App
 A modern, intelligent note-taking application that transforms how you capture, organize, and interact with your knowledge. Built with React, Django, and AI integration for automatic content processing and intelligent insights.
 
-[DISCLAIMER]The system's backend is fully human-made while the frontend is completely AI-generated along with the README file.
+[DISCLAIMER] The system's backend is fully human-made while the frontend is completely AI-generated along with the README file, the tests and shell scripts.
 
 ## ✨ Features
 
