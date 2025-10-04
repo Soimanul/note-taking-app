@@ -1,7 +1,7 @@
 # 📝 Synapse - AI-Powered Note Taking App
 A modern, intelligent note-taking application that transforms how you capture, organize, and interact with your knowledge. Built with React, Django, and AI integration for automatic content processing and intelligent insights.
 
-[DISCLAIMER]The system's backend is fully human-made while the frontend is completely AI-generated along with the README file.
+[DISCLAIMER]The system's backend is human-made, while the frontend is completely AI-generated along with the README file, the shell and the DEPLOYMENT.md.
 
 ## ✨ Features
 
@@ -60,7 +60,6 @@ A modern, intelligent note-taking application that transforms how you capture, o
 
 ## 🚀 Quick Start
 
-### Production (Recommended)
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/note-taking-app.git
@@ -68,24 +67,21 @@ cd note-taking-app
 
 # Copy and configure environment
 cp .env.template .env
-# Edit .env with your values
+# Edit .env with your API keys and settings
 
-# Start the application
-docker-compose up -d
-
-# Access the app
-# Frontend: http://localhost
-# Admin: http://localhost/admin/
+# Start the application (choose one)
+./deploy.sh              # Production (Linux/Mac)
+.\deploy.ps1             # Production (Windows)  
+./deploy-dev.sh          # Development (Linux/Mac)
+.\deploy-dev.ps1         # Development (Windows)
 ```
 
-### Development
-```bash
-# Start development environment
-docker-compose -f docker-compose-dev.yml up -d
+**📋 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)**
 
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-```
+### Access Points
+- **Frontend**: http://localhost (production) or http://localhost:3000 (dev)
+- **Admin Panel**: http://localhost/admin/
+- **API Documentation**: http://localhost/api/
 
 ## 📚 Usage
 
@@ -169,19 +165,20 @@ The application provides a RESTful API for all functionality:
 
 ## 🚀 Deployment
 
-### Production Deployment
-1. **Server Setup**: Linux server with Docker installed
-2. **Environment**: Configure `.env` with production values
-3. **SSL**: Set up SSL certificates (recommended)
-4. **Domain**: Configure DNS and domain settings
-5. **Deploy**: Run `docker-compose up -d`
-6. **Monitor**: Set up logging and monitoring
+For detailed deployment instructions including development and production setups, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
-### Scaling Options
-- **Horizontal Scaling**: Multiple web server instances
-- **Database**: PostgreSQL read replicas
-- **Caching**: Redis cluster setup  
-- **Load Balancing**: Nginx upstream configuration
+### Quick Production Deployment
+```bash
+cp .env.template .env    # Configure environment
+./deploy.sh             # Linux/Mac
+.\deploy.ps1            # Windows
+```
+
+### Quick Development Setup  
+```bash
+./deploy-dev.sh         # Linux/Mac  
+.\deploy-dev.ps1        # Windows
+```
 
 ## 🤝 Contributing
 

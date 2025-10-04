@@ -9,7 +9,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (including dev dependencies for build tools)
-RUN npm ci
+# Use --prefer-offline and --no-audit to avoid version updates
+RUN npm ci --prefer-offline --no-audit
 
 # Copy the rest of the application code
 COPY . .

@@ -24,8 +24,3 @@ pinecone
 
 # Production Server
 gunicorn
-
-# Testing
-pytest
-pytest-django
-pytest-mock

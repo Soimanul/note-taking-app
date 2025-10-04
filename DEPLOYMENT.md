@@ -1,20 +1,79 @@
-# Production Deployment Guide
+# Deployment Guide
 
-This guide will help you deploy the Note Taking App in production using Docker Compose.
+This guide covers both development and production deployment of the Note Taking App using Docker.
+
+## 🏗️ Architecture Overview
+
+### Docker Structure
+- **Production**: `Dockerfile` (optimized, security-hardened, no test files)
+- **Development**: `Dockerfile.dev` (includes debugging tools, test dependencies)
+
+### Requirements Structure  
+- **Production**: `requirements.txt` (core dependencies only)
+- **Development**: `requirements-dev.txt` (includes pytest, debugging tools)
 
 ## 🚀 Quick Start Commands
 
-**Production (default):**
+### Production Deployment
 ```bash
-docker-compose up -d          # Start production environment
-docker-compose down           # Stop production environment  
-docker-compose logs -f        # View logs
+# Full production deployment
+docker-compose up -d --build
+
+# Using deployment script (recommended)
+./deploy.sh              # Linux/Mac
+.\deploy.ps1             # Windows PowerShell
 ```
 
-**Development:**
+### Development Deployment  
 ```bash
-docker-compose -f docker-compose-dev.yml up -d    # Start dev environment
+# Full development deployment
+docker-compose -f docker-compose-dev.yml up -d --build
+
+# Using deployment script (recommended)
+./deploy-dev.sh          # Linux/Mac  
+.\deploy-dev.ps1         # Windows PowerShell
 ```
+
+### Quick Commands
+```bash
+# Production
+docker-compose up -d          # Start production
+docker-compose down           # Stop production
+docker-compose logs -f        # View production logs
+
+# Development  
+docker-compose -f docker-compose-dev.yml up -d    # Start dev
+docker-compose -f docker-compose-dev.yml down     # Stop dev
+docker-compose -f docker-compose-dev.yml logs -f  # View dev logs
+```
+
+## 🔄 Environment Differences
+
+### Development Environment
+- **Purpose**: Local development, testing, debugging
+- **Features**: 
+  - Hot reloading with volume mounts
+  - Debug mode enabled (`DEBUG=True`)
+  - All test files included
+  - Development tools (pytest, debug-toolbar, black, flake8)
+  - Source code mounted for live editing
+- **Access**: 
+  - Backend: http://localhost:8000
+  - Frontend: http://localhost:3000 (run `npm start` separately)
+- **Security**: Relaxed (development only)
+
+### Production Environment  
+- **Purpose**: Live deployment, optimized performance
+- **Features**:
+  - Optimized builds with multi-stage Docker
+  - Security hardened (non-root user, minimal attack surface)
+  - Test files removed from final image
+  - Static files collected and served via nginx
+  - Production-only dependencies
+- **Access**:
+  - Frontend: http://localhost (port 80)
+  - Backend: http://localhost/api/ (proxied through nginx)
+- **Security**: Hardened (production ready)
 
 ## Prerequisites
 
@@ -39,15 +98,24 @@ nano .env  # or your preferred editor
 
 ### 2. Run Deployment Script
 
-**Windows (PowerShell):**
+**Production - Windows (PowerShell):**
 ```powershell
 .\deploy.ps1
 ```
 
-**Linux/Mac:**
+**Production - Linux/Mac:**
 ```bash
-chmod +x deploy.sh
 ./deploy.sh
+```
+
+**Development - Windows (PowerShell):**
+```powershell
+.\deploy-dev.ps1
+```
+
+**Development - Linux/Mac:**
+```bash
+./deploy-dev.sh
 ```
 
 ### 3. Access Your Application
@@ -60,13 +128,42 @@ chmod +x deploy.sh
 
 If you prefer to deploy manually:
 
-### 1. Build and Start Services
+### Production Deployment
 
 ```bash
-# Build images
-docker-compose -f docker-compose-prod.yml build
+# 1. Build images
+docker-compose build --no-cache
 
-# Start services in background
+# 2. Start services in background
+docker-compose up -d
+
+# 3. Run migrations
+docker-compose exec web python manage.py migrate
+
+# 4. Collect static files  
+docker-compose exec web python manage.py collectstatic --noinput
+
+# 5. Create superuser (optional)
+docker-compose exec web python manage.py createsuperuser
+```
+
+### Development Deployment
+
+```bash
+# 1. Build development images
+docker-compose -f docker-compose-dev.yml build --no-cache
+
+# 2. Start development services
+docker-compose -f docker-compose-dev.yml up -d
+
+# 3. Run migrations
+docker-compose -f docker-compose-dev.yml exec web python manage.py migrate
+
+# 4. Create superuser (optional)
+docker-compose -f docker-compose-dev.yml exec web python manage.py createsuperuser
+
+# 5. Start frontend separately (optional)
+cd frontend && npm start
 docker-compose -f docker-compose-prod.yml up -d
 ```
 

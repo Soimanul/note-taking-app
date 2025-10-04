@@ -1,0 +1,15 @@
+# Development requirements - includes production + testing tools
+-r requirements.txt
+
+# Additional Development & Testing Tools
+pytest
+pytest-django
+pytest-mock
+pytest-cov
+pytest-html
+
+# Development utilities
+django-debug-toolbar
+ipdb
+black
+flake8

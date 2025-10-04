@@ -1,17 +1,47 @@
-# Use an official Python runtime as a parent image
+# Production Django Dockerfile
 FROM python:3.11-slim
 
-# Set environment variables to prevent Python from writing .pyc files and to run in unbuffered mode
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Set the working directory inside the container
+# Create non-root user for security
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file and install the dependencies
-# This is done first to leverage Docker's caching mechanism
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies (production only)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the backend code into the /app directory
-COPY . .
+# Copy source code selectively (exclude tests and dev files)
+COPY config/ ./config/
+COPY core/ ./core/
+COPY manage.py .
+
+# Remove test files from production image
+RUN find . -name "test_*.py" -delete && \
+    find . -name "*_test.py" -delete && \
+    find . -name "tests.py" -delete
+
+# Create media and static directories with proper permissions
+RUN mkdir -p /app/media/uploads /app/staticfiles && \
+    chown -R appuser:appgroup /app
+
+# Collect static files
+RUN python manage.py collectstatic --noinput
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Set the default command to run the Django server with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]

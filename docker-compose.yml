@@ -38,7 +38,7 @@ services:
   web:
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
     env_file:
       - ./.env
     environment:
@@ -73,7 +73,7 @@ services:
   worker:
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
     command: celery -A config worker -l info --concurrency=2
     env_file:
       - ./.env
