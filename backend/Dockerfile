@@ -30,9 +30,9 @@ RUN find . -name "test_*.py" -delete && \
     find . -name "*_test.py" -delete && \
     find . -name "tests.py" -delete
 
-# Create media and static directories with proper permissions
-RUN mkdir -p /app/media/uploads /app/staticfiles && \
-    chown -R appuser:appgroup /app
+# Create media, static, and cache directories with proper permissions
+RUN mkdir -p /app/media/uploads /app/staticfiles /home/appuser/.cache && \
+    chown -R appuser:appgroup /app /home/appuser
 
 # Collect static files
 RUN python manage.py collectstatic --noinput

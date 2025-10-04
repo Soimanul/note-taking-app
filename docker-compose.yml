@@ -88,6 +88,7 @@ services:
       REDIS_URL: redis://redis:6379/0
     volumes:
       - media_files:/app/media
+      - static_files:/app/staticfiles
     networks:
       - app-network
     depends_on:
@@ -103,6 +104,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+    volumes:
+      - static_files:/usr/share/nginx/html/static
     networks:
       - app-network
     depends_on:
