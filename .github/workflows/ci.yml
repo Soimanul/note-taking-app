@@ -29,7 +29,7 @@ jobs:
       - name: Run Backend Tests with Coverage
         run: |
           source venv/bin/activate
-          export PYTHONPATH="${PWD}:${PYTHONPATH}"
+          export PYTHONPATH="${PWD}/backend:${PYTHONPATH}"
           pytest tests \
             --cov=core \
             --cov-report=html:cov_html \
