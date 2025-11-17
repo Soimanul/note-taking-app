@@ -29,10 +29,14 @@ jobs:
       - name: Run Backend Tests with Coverage
         run: |
           source venv/bin/activate
-          # Ensure backend package is importable when tests run from repo root
-          export PYTHONPATH="${PYTHONPATH}:${PWD}/backend"
-          # Run pytest from repo root (pytest.ini and tests/ live here)
-          pytest --cov=core --cov=backend.core --cov-report=html:cov_html --cov-fail-under=70 -v
+          # Ensure backend packages are importable
+          export PYTHONPATH="${PWD}:${PYTHONPATH}"
+          # Run pytest from repo root, point to tests folder
+          pytest tests \
+            --cov=core \
+            --cov-report=html:cov_html \
+            --cov-fail-under=70 \
+            -v
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
