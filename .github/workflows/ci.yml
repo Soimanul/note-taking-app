@@ -21,19 +21,18 @@ jobs:
           python-version: '3.11'
 
       - name: Install Backend Dependencies
-        working-directory: ./backend
         run: |
           python -m venv venv
           source venv/bin/activate
-          pip install -r requirements-dev.txt
+          pip install -r backend/requirements-dev.txt
 
       - name: Run Backend Tests with Coverage
-        working-directory: ./backend
         run: |
           source venv/bin/activate
-          pytest ../tests \
+          export PYTHONPATH="${PWD}:${PYTHONPATH}"
+          pytest tests \
             --cov=core \
-            --cov-report=html:../cov_html \
+            --cov-report=html:cov_html \
             --cov-fail-under=70 \
             -v
 
