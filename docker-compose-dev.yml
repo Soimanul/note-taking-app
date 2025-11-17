@@ -53,6 +53,16 @@ services:
       - db
       - redis
 
+  # Prometheus Monitoring Service
+  prometheus:
+    image: prom/prometheus:v2.37.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - web
+
 # Named volume to persist database data
 volumes:
   postgres_data:

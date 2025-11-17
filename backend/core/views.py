@@ -1,6 +1,9 @@
 import os
 from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, status
+from django.http import JsonResponse
+from django.db import connection
+from django.db.utils import OperationalError
 
 User = get_user_model()
 from rest_framework.response import Response
@@ -14,6 +17,32 @@ from .models import Document
 from .serializers import DocumentSerializer, UserSerializer
 from .tasks import process_document, generate_summary_from_notes, generate_quiz_from_notes
 from . import services
+
+# ==============================================================================
+#  -2. Health Check
+# ==============================================================================
+def health_check(request):
+    """
+    Enhanced health check that verifies database connectivity.
+    """
+    try:
+        # Attempt database connection and execute a simple query
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_status = "ok"
+        http_status = 200
+    except OperationalError:
+        db_status = "error"
+        http_status = 503  
+
+    data = {
+        'status': 'ok' if http_status == 200 else 'error',
+        'message': 'Application is healthy.' if http_status == 200 else 'Application is running but database is unreachable.',
+        'dependencies': {
+            'database': db_status
+        }
+    }
+    return JsonResponse(data, status=http_status)
 
 # ==============================================================================
 #  -1. Helper Functions

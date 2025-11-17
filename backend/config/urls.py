@@ -17,19 +17,20 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from core.views import health_check as core_health_check
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
 
-def health_check(request):
-    return JsonResponse({"status": "healthy", "service": "note-taking-app"})
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Health check endpoint
-    path('api/health/', health_check, name='health_check'),
+    # keep API-level health under /api/health (provided by core.urls) and
+    # also expose a root-level health at /health/ for external load balancers
+    path('health/', core_health_check, name='root_health'),
+    path('api/health/', core_health_check, name='health_check'),
     
     # API URLs
     path('api/', include('core.urls')),
@@ -38,4 +39,5 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('', include('django_prometheus.urls')),
 ]
