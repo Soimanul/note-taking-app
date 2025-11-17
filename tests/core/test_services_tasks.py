@@ -1,18 +1,7 @@
 import importlib
-import importlib.util
 from unittest.mock import MagicMock
 
-
-if importlib.util.find_spec("backend"):
-    services = importlib.import_module("backend.core.services")
-    tasks = importlib.import_module("backend.core.tasks")
-    models = importlib.import_module("backend.core.models")
-    PREFIX = "backend."
-else:
-    services = importlib.import_module("core.services")
-    tasks = importlib.import_module("core.tasks")
-    models = importlib.import_module("core.models")
-    PREFIX = ""
+from core import services, tasks, models
 
 
 def test_gemini_adapter_connection_error():

@@ -21,30 +21,21 @@ jobs:
           python-version: '3.11'
 
       - name: Install Backend Dependencies
+        working-directory: ./backend
         run: |
           python -m venv venv
           source venv/bin/activate
-          pip install -r backend/requirements-dev.txt
+          pip install -r requirements-dev.txt
 
       - name: Run Backend Tests with Coverage
+        working-directory: ./backend
         run: |
           source venv/bin/activate
-          export PYTHONPATH="${PWD}/backend:${PYTHONPATH}"
-          python - <<'PY'
-          import os
-          import sys
-          import django
-          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
-          django.setup()
-          import pytest
-          sys.exit(pytest.main([
-              'tests',
-              '--cov=core',
-              '--cov-report=html:cov_html',
-              '--cov-fail-under=70',
-              '-v'
-          ]))
-          PY
+          pytest ../tests \
+            --cov=core \
+            --cov-report=html:../cov_html \
+            --cov-fail-under=70 \
+            -v
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

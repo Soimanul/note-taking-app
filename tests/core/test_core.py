@@ -1,28 +1,11 @@
 import uuid
-import importlib
-import importlib.util
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework import status
 from unittest.mock import patch, MagicMock
 
-# Determine import prefix depending on how the container mounts the code.
-# If the package `backend` is available (tests run from repo root), use
-# `backend.core.*`. If not (dev container mounts backend/ at /app), import
-# from `core.*`. This keeps tests runnable in both environments.
-if importlib.util.find_spec("backend"):
-    _models = importlib.import_module("backend.core.models")
-    _tasks = importlib.import_module("backend.core.tasks")
-    PREFIX = "backend."
-else:
-    _models = importlib.import_module("core.models")
-    _tasks = importlib.import_module("core.tasks")
-    PREFIX = ""
-
-Document = _models.Document
-GeneratedContent = _models.GeneratedContent
-Log = _models.Log
-process_document = _tasks.process_document
+from core.models import Document, GeneratedContent, Log
+from core.tasks import process_document
 
 # ==============================================================================
 #  1. API Tests for Documents
@@ -105,10 +88,10 @@ class CeleryTaskTests(APITestCase):
         )
 
     # We use @patch to replace external calls with mock objects during the test
-    @patch(PREFIX + 'core.services.pinecone_index')
-    @patch(PREFIX + 'core.services.embedding_model')
-    @patch(PREFIX + 'core.services.ai_adapter')
-    @patch(PREFIX + 'core.tasks.get_parser')
+    @patch('core.services.pinecone_index')
+    @patch('core.services.embedding_model')
+    @patch('core.services.ai_adapter')
+    @patch('core.tasks.get_parser')
     def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone):
         """
         Test the successful execution of the `process_document` task.
@@ -147,7 +130,7 @@ class CeleryTaskTests(APITestCase):
         mock_embedding.encode.assert_called_once()
         mock_pinecone.upsert.assert_called_once()
 
-    @patch(PREFIX + 'core.tasks.get_parser')
+    @patch('core.tasks.get_parser')
     def test_process_document_failure_path(self, mock_get_parser):
         """
         Test the failure path of the `process_document` task (e.g., parsing fails).

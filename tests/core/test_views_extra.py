@@ -1,20 +1,12 @@
 import io
-import importlib
-import importlib.util
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
 from rest_framework import status
 from unittest.mock import patch
+from django.contrib.auth import get_user_model
 
-
-if importlib.util.find_spec("backend"):
-    views_mod = importlib.import_module("backend.core.views")
-    models_mod = importlib.import_module("backend.core.models")
-    PREFIX = "backend."
-else:
-    views_mod = importlib.import_module("core.views")
-    models_mod = importlib.import_module("core.models")
-    PREFIX = ""
+from core import views as views_mod
+from core import models as models_mod
 
 
 class ViewsExtraTests(APITestCase):
@@ -62,8 +54,8 @@ class ViewsExtraTests(APITestCase):
         resp2 = self.client.post(url, data={"type": "summary"}, format="json")
         assert resp2.status_code == status.HTTP_400_BAD_REQUEST
 
-    @patch(PREFIX + 'core.views.generate_summary_from_notes')
-    @patch(PREFIX + 'core.views.generate_quiz_from_notes')
+    @patch('core.views.generate_summary_from_notes')
+    @patch('core.views.generate_quiz_from_notes')
     def test_generatecontent_triggers_tasks(self, mock_quiz_task, mock_summary_task):
         from django.contrib.auth import get_user_model
         User = get_user_model()
