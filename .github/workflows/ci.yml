@@ -62,10 +62,14 @@ jobs:
           set +a
 
           # If the .env points to a different DB host (for example 'db'), override
-          # it here so the runner connects to the GitHub Actions Postgres service
-          # which is reachable on localhost:5432 from the job runner.
-          export DB_HOST=127.0.0.1
-          export DB_PORT=5432
+          # the Postgres-related env vars here so Django connects to the
+          # GitHub Actions Postgres service which is reachable on localhost:5432.
+          export POSTGRES_HOST=127.0.0.1
+          export POSTGRES_PORT=5432
+          # Ensure credentials match the service container values above
+          export POSTGRES_USER=study_user
+          export POSTGRES_PASSWORD=securepassword123
+          export POSTGRES_DB=study_db
 
           # Wait a short time for Postgres service to become healthy
           echo "Waiting for Postgres to accept connections on localhost:5432..."
