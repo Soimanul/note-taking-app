@@ -11,6 +11,8 @@ on:
 jobs:
   backend-ci:
     runs-on: ubuntu-latest
+    # Use the GitHub Environment that contains the ENV_FILE secret
+    environment: ENV_FILE
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -29,6 +31,23 @@ jobs:
       - name: Run Backend Tests with Coverage
         run: |
           source venv/bin/activate
+
+          # Write .env from the ENV_FILE secret that lives in the GitHub Environment
+          if [ -z "${{ secrets.ENV_FILE }}" ]; then
+            echo "ERROR: ENV_FILE secret is not set in the environment. Aborting." >&2
+            exit 1
+          fi
+
+          # create .env from the secret (preserve newlines)
+          printf '%s
+' "${{ secrets.ENV_FILE }}" > .env
+
+          # Export variables from .env for subprocesses
+          set -a
+          # shellcheck disable=SC1091
+          source .env
+          set +a
+
           export PYTHONPATH="${PWD}/backend:${PYTHONPATH}"
           pytest tests \
             --cov=core \
