@@ -13,6 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     # Use the GitHub Environment that contains the ENV_FILE secret
     environment: ENV_FILE
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: study_user
+          POSTGRES_PASSWORD: securepassword123
+          POSTGRES_DB: study_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U study_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -46,6 +60,23 @@ jobs:
           # shellcheck disable=SC1091
           source .env
           set +a
+
+          # If the .env points to a different DB host (for example 'db'), override
+          # it here so the runner connects to the GitHub Actions Postgres service
+          # which is reachable on localhost:5432 from the job runner.
+          export DB_HOST=127.0.0.1
+          export DB_PORT=5432
+
+          # Wait a short time for Postgres service to become healthy
+          echo "Waiting for Postgres to accept connections on localhost:5432..."
+          for i in {1..20}; do
+            if timeout 1 bash -c "</dev/tcp/127.0.0.1/5432" >/dev/null 2>&1; then
+              echo "Postgres is accepting connections"
+              break
+            fi
+            echo "Postgres not ready yet, sleeping... ($i)"
+            sleep 1
+          done
 
           export PYTHONPATH="${PWD}/backend:${PYTHONPATH}"
           pytest tests \
