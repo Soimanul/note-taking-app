@@ -29,9 +29,9 @@ jobs:
       - name: Run Backend Tests with Coverage
         run: |
           source venv/bin/activate
-          # Ensure backend packages are importable
-          export PYTHONPATH="${PWD}:${PYTHONPATH}"
-          # Run pytest from repo root, point to tests folder
+          # Ensure backend package is importable as top-level 'core'
+          export PYTHONPATH="${PWD}/backend:${PWD}:${PYTHONPATH}"
+          # Run pytest from repo root (pytest.ini and tests/ live here)
           pytest tests \
             --cov=core \
             --cov-report=html:cov_html \
