@@ -21,24 +21,22 @@ jobs:
           python-version: '3.11'
 
       - name: Install Backend Dependencies
-        working-directory: ./backend
         run: |
           python -m venv venv
           source venv/bin/activate
-          pip install -r requirements-dev.txt
+          pip install -r backend/requirements-dev.txt
 
       - name: Run Backend Tests with Coverage
-        working-directory: ./backend
         run: |
           source venv/bin/activate
-          pytest ../tests \
-            --cov=core \
-            --cov-report=html:../cov_html \
-            --cov-fail-under=70 \
-            -q
-          
+          # Ensure backend package is importable when tests run from repo root
+          export PYTHONPATH="${PYTHONPATH}:${PWD}/backend"
+          # Run pytest from repo root (pytest.ini and tests/ live here)
+          pytest --cov=core --cov=backend.core --cov-report=html:cov_html --cov-fail-under=70 -v
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: coverage-report
           path: cov_html/
