@@ -39,8 +39,7 @@ jobs:
           fi
 
           # create .env from the secret (preserve newlines)
-          printf '%s
-' "${{ secrets.ENV_FILE }}" > .env
+          printf '%s\n' "${{ secrets.ENV_FILE }}" > .env
 
           # Export variables from .env for subprocesses
           set -a
