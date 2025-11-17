@@ -29,14 +29,22 @@ jobs:
       - name: Run Backend Tests with Coverage
         run: |
           source venv/bin/activate
-          # Ensure backend package is importable as top-level 'core'
-          export PYTHONPATH="${PWD}/backend:${PWD}:${PYTHONPATH}"
-          # Run pytest from repo root (pytest.ini and tests/ live here)
-          pytest tests \
-            --cov=core \
-            --cov-report=html:cov_html \
-            --cov-fail-under=70 \
-            -v
+          export PYTHONPATH="${PWD}/backend:${PYTHONPATH}"
+          python - <<'PY'
+          import os
+          import sys
+          import django
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
+          django.setup()
+          import pytest
+          sys.exit(pytest.main([
+              'tests',
+              '--cov=core',
+              '--cov-report=html:cov_html',
+              '--cov-fail-under=70',
+              '-v'
+          ]))
+          PY
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
