@@ -1,0 +1,84 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_WORKING_DIR: terraform/azure
+  BACKEND_IMAGE_BASE: ghcr.io/${{ toLower(github.repository_owner) }}/note-taking-app-backend
+  FRONTEND_IMAGE_BASE: ghcr.io/${{ toLower(github.repository_owner) }}/note-taking-app-frontend
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute lowercased repository owner
+        id: owner
+        run: |
+          echo "owner_lower=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Azure login (service principal JSON)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false -reconfigure \
+            -backend-config="resource_group_name=${TF_STATE_RG:-BCSAI2025-DEVOPS-STUDENTS-A}" \
+            -backend-config="storage_account_name=${TF_STATE_ACCOUNT:-noteapptfstateqafaup}" \
+            -backend-config="container_name=${TF_STATE_CONTAINER:-tfstate}" \
+            -backend-config="key=${TF_STATE_KEY:-note-taking-app.terraform.tfstate}"
+
+      - name: Terraform plan (preview only)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan -input=false \
+            -var="backend_image=ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-backend:${{ github.sha }}" \
+            -var="frontend_image=ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-frontend:${{ github.sha }}"
+
+  terraform-apply:
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Azure login (service principal JSON)
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Terraform init (reconfigure)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init -input=false -reconfigure \
+            -backend-config="resource_group_name=${TF_STATE_RG:-BCSAI2025-DEVOPS-STUDENTS-A}" \
+            -backend-config="storage_account_name=${TF_STATE_ACCOUNT:-noteapptfstateqafaup}" \
+            -backend-config="container_name=${TF_STATE_CONTAINER:-tfstate}" \
+            -backend-config="key=${TF_STATE_KEY:-note-taking-app.terraform.tfstate}"
+
+      - name: Terraform apply (passes GHCR secrets as TF vars)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_ghcr_user: ${{ secrets.GHCR_USER }}
+          TF_VAR_ghcr_pat: ${{ secrets.GHCR_PAT }}
+        run: |
+          terraform apply -input=false -auto-approve \
+            -var="backend_image=ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-backend:${{ github.sha }}" \
+            -var="frontend_image=ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-frontend:${{ github.sha }}"

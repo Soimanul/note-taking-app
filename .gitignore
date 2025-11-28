@@ -206,3 +206,23 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Terraform / state
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+*.tfvars.json
+*.tfplan
+*.tfplan.*
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+# Azure local creds / caches
+*.azure*
+# local terraform backend files
+backend.tf
+backend.tfvars
