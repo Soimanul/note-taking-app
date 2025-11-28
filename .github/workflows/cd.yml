@@ -11,8 +11,6 @@ permissions:
 
 env:
   TF_WORKING_DIR: terraform/azure
-  BACKEND_IMAGE_BASE: ghcr.io/${{ toLower(github.repository_owner) }}/note-taking-app-backend
-  FRONTEND_IMAGE_BASE: ghcr.io/${{ toLower(github.repository_owner) }}/note-taking-app-frontend
 
 jobs:
   terraform-plan:
@@ -56,6 +54,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Compute lowercased repository owner
+        id: owner
+        run: |
+          echo "owner_lower=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
@@ -73,7 +76,7 @@ jobs:
             -backend-config="container_name=${TF_STATE_CONTAINER:-tfstate}" \
             -backend-config="key=${TF_STATE_KEY:-note-taking-app.terraform.tfstate}"
 
-      - name: Terraform apply (passes GHCR secrets as TF vars)
+      - name: Terraform apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           TF_VAR_ghcr_user: ${{ secrets.GHCR_USER }}
