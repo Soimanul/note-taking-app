@@ -50,7 +50,7 @@ jobs:
   terraform-apply:
     needs: terraform-plan
     runs-on: ubuntu-latest
-    environment: production
+    environment: ENV_FILE
     steps:
       - uses: actions/checkout@v4
 
