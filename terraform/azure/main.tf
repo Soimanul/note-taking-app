@@ -55,12 +55,25 @@ module "backend_app" {
   ingress_enabled     = true
   target_port         = 8000
   command             = []  // Uses Dockerfile's default CMD (gunicorn)
-  
+  min_replicas        = 1
+
+  startup_probe = {
+    transport = "HTTP"
+    port      = 8000
+    path      = "/health/"
+  }
+
+  liveness_probe = {
+    transport = "HTTP"
+    port      = 8000
+    path      = "/health/"
+  }
+
   env_vars = {
     DEBUG                  = "False"
     DJANGO_SETTINGS_MODULE = "config.settings"
     ALLOWED_HOSTS          = "*"
-    CORS_ALLOWED_ORIGINS   = "https://frontend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io"
+    CORS_ALLOWED_ORIGINS   = module.frontend_app.url
   }
   
   secrets = {
@@ -93,7 +106,8 @@ module "worker_app" {
   identity_id         = module.identities.identity_id
   ingress_enabled     = false  // Worker doesn't need HTTP ingress
   command             = ["celery", "-A", "config", "worker", "-l", "info", "--concurrency=2"]
-  
+  min_replicas        = 1
+
   env_vars = {
     DEBUG                  = "False"
     DJANGO_SETTINGS_MODULE = "config.settings"

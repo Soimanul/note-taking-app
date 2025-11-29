@@ -183,10 +183,10 @@ LOGIN_REDIRECT_URL = '/api/documents/'
 # ==============================================================================
 
 # Read allowed origins from environment variable (comma-separated)
-# Default includes Azure Container Apps URL and localhost for dev
+# Default to wildcard for same-domain Azure Container Apps
 CORS_ALLOWED_ORIGINS_STR = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
-    'https://frontend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io'
+    'https://*.azurecontainerapps.io'
 )
 
 CORS_ALLOWED_ORIGINS = [
@@ -228,3 +228,36 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+# ==============================================================================
+# Celery Configuration
+# ==============================================================================
+
+# Celery broker URL (uses Redis)
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+# Celery task settings
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+
+# ==============================================================================
+# Startup Validation
+# ==============================================================================
+
+import sys
+
+# Validate critical environment variables on startup (but not during migrations)
+if 'migrate' not in sys.argv and 'makemigrations' not in sys.argv:
+    required_vars = ['SECRET_KEY', 'POSTGRES_HOST', 'REDIS_URL']
+    missing_vars = [var for var in required_vars if not os.environ.get(var)]
+
+    if missing_vars:
+        raise ValueError(
+            f"Missing required environment variables: {', '.join(missing_vars)}. "
+            f"Please check your Azure Container App configuration."
+        )

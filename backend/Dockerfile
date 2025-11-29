@@ -44,4 +44,4 @@ USER appuser
 EXPOSE 8000
 
 # Set the default command to run the Django server with Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "config.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info", "config.wsgi:application"]

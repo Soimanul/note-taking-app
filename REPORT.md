@@ -22,6 +22,42 @@ All three container apps share a **user-assigned managed identity** with `AcrPul
 
 ---
 
+## Code Quality and Refactoring
+
+### Refactoring Improvements
+
+This assignment built upon Assignment 1 with the following code quality improvements:
+
+1. **Removed Code Smells**:
+   - Eliminated hardcoded values by using environment variables for all configuration
+   - Extracted long methods into smaller, single-responsibility functions
+   - Removed code duplication in API client methods
+
+2. **SOLID Principles Applied**:
+   - **Single Responsibility**: Separated concerns between models, serializers, views, and services
+   - **Open/Closed**: Services are extensible without modifying core logic
+   - **Dependency Inversion**: Used Django's dependency injection for database and cache connections
+
+3. **Configuration Management**:
+   - All secrets and configuration moved to environment variables
+   - `.env.template` provided for easy local setup
+   - Terraform manages production configuration
+
+4. **Code Organization**:
+   - Modular Terraform structure with reusable modules
+   - Separation of concerns: frontend, backend, worker containers
+   - Clear separation between development and production configurations
+
+### Best Practices Implemented
+
+- **Type Safety**: Used Django REST Framework serializers for input validation
+- **Error Handling**: Proper exception handling in views and services
+- **Logging**: Structured logging for debugging and monitoring
+- **Security**: Credentials stored as secrets, never in code
+- **Documentation**: Inline comments and comprehensive README
+
+---
+
 ## CI/CD Pipeline
 
 ### Continuous Integration (CI)
@@ -208,6 +244,20 @@ Database and Redis credentials are:
 ### Challenge 4: Environment Variables in CI
 **Problem**: Django needed `.env` file for tests  
 **Solution**: Reconstructed `.env` from individual GitHub secrets in CI workflow
+
+### Challenge 5: CORS Configuration for Separate Container Apps
+**Problem**: Frontend and backend deployed as separate Azure Container Apps with different domains, causing CORS policy violations  
+**Solution**: 
+- Made Django CORS settings read from environment variable (`CORS_ALLOWED_ORIGINS`)
+- Added frontend domain to backend's allowed origins via Terraform
+- Implemented runtime API URL injection in React using `window.ENV` and nginx entrypoint script
+
+### Challenge 6: React API Configuration in Container Environment
+**Problem**: Create React App requires environment variables at build time, but backend URL isn't available until Terraform runs  
+**Solution**: 
+- Created runtime configuration pattern using `env-config.js` served with no-cache headers
+- Used nginx entrypoint script to inject backend URL at container startup
+- React reads configuration from `window.ENV` instead of build-time `process.env`
 
 ---
 
