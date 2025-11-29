@@ -5,6 +5,7 @@ import "@blocknote/core/fonts/inter.css";
 import "@mantine/core/styles.css";
 import "@blocknote/mantine/style.css";
 import "./index.css";
+import config from './config';
 
 // --- Custom Selection Styles ---
 const customStyles = `
@@ -89,7 +90,7 @@ const apiClient = {
   },
   
   refreshToken: async (refreshToken) => {
-    const response = await fetch('/api/token/refresh/', {
+    const response = await fetch(`${config.apiUrl}/api/token/refresh/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh: refreshToken }),
@@ -128,7 +129,7 @@ const apiClient = {
   },
   
   login: async (username, password) => {
-    const response = await fetch('/api/token/', {
+    const response = await fetch(`${config.apiUrl}/api/token/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -141,7 +142,7 @@ const apiClient = {
   },
   
   signup: async (username, password, email) => {
-    const response = await fetch('/api/register/', {
+    const response = await fetch(`${config.apiUrl}/api/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, email }),
@@ -155,7 +156,7 @@ const apiClient = {
   
   getDocuments: async (user) => {
     const response = await apiClient.fetchWithTokenRefresh(
-      '/api/documents/',
+      `${config.apiUrl}/api/documents/`,
       { headers: { 'Authorization': `Bearer ${user.access}` } },
       user
     );
@@ -165,7 +166,7 @@ const apiClient = {
   
   getDocumentDetails: async (user, docId) => {
     const response = await apiClient.fetchWithTokenRefresh(
-      `/api/documents/${docId}/`,
+      `${config.apiUrl}/api/documents/${docId}/`,
       { headers: { 'Authorization': `Bearer ${user.access}` } },
       user
     );
@@ -177,7 +178,7 @@ const apiClient = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await apiClient.fetchWithTokenRefresh(
-      '/api/documents/',
+      `${config.apiUrl}/api/documents/`,
       {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${user.access}` },
@@ -191,7 +192,7 @@ const apiClient = {
   
   searchDocuments: async (user, query) => {
     const response = await apiClient.fetchWithTokenRefresh(
-      `/api/search/?q=${encodeURIComponent(query)}`,
+      `${config.apiUrl}/api/search/?q=${encodeURIComponent(query)}`,
       { headers: { 'Authorization': `Bearer ${user.access}` } },
       user
     );
@@ -201,7 +202,7 @@ const apiClient = {
   
   generateContent: async (user, docId, contentType) => {
     const response = await apiClient.fetchWithTokenRefresh(
-      `/api/documents/${docId}/generate/`,
+      `${config.apiUrl}/api/documents/${docId}/generate/`,
       {
         method: 'POST',
         headers: {
@@ -226,7 +227,7 @@ const apiClient = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await apiClient.fetchWithTokenRefresh(
-      '/api/documents/',
+      `${config.apiUrl}/api/documents/`,
       {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${user.access}` },
@@ -240,7 +241,7 @@ const apiClient = {
 
   deleteDocument: async (user, docId) => {
     const response = await apiClient.fetchWithTokenRefresh(
-      `/api/documents/${docId}/`,
+      `${config.apiUrl}/api/documents/${docId}/`,
       {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.access}` }

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'corsheaders',
     'core.apps.CoreConfig',
 ]
 
@@ -61,6 +62,7 @@ SIMPLE_JWT = {
 
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -175,3 +177,44 @@ if not DEBUG:
 
 # Redirect users to the main document list view after logging in.
 LOGIN_REDIRECT_URL = '/api/documents/'
+
+# ==============================================================================
+# CORS Configuration for Azure Container Apps
+# ==============================================================================
+
+CORS_ALLOWED_ORIGINS = [
+    "https://frontend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io",
+]
+
+# For development, also allow localhost
+if DEBUG:
+    CORS_ALLOWED_ORIGINS += [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+# Allow credentials (needed for JWT tokens in cookies/headers)
+CORS_ALLOW_CREDENTIALS = True
+
+# Allowed methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Allowed headers (including JWT authorization)
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]

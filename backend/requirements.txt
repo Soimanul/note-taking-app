@@ -3,6 +3,7 @@ django
 djangorestframework
 python-dotenv
 djangorestframework-simplejwt 
+django-cors-headers
 
 # PostgreSQL Connector
 psycopg2-binary
