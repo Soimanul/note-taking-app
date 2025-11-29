@@ -1,4 +1,3 @@
-
 name: CI Pipeline
 
 permissions:
@@ -7,31 +6,30 @@ permissions:
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   backend-ci:
     runs-on: ubuntu-latest
-    # Use the GitHub Environment that contains the ENV_FILE secret
-    environment: ENV_FILE
+    environment: production
+
     services:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: study_user
-          POSTGRES_PASSWORD: securepassword123
-          POSTGRES_DB: study_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U study_user"
-          --health-interval 10s
+          --health-cmd "pg_isready -U test_user"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,55 +37,40 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
 
       - name: Install Backend Dependencies
         run: |
           python -m venv venv
-          source venv/bin/activate
+          . venv/bin/activate
           pip install -r backend/requirements-dev.txt
 
       - name: Run Backend Tests with Coverage
+        env:
+          DEBUG: ${{ vars.DEBUG }}
+          SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
         run: |
-          source venv/bin/activate
+          . venv/bin/activate
 
-          # Write .env from the ENV_FILE secret that lives in the GitHub Environment
-          if [ -z "${{ secrets.ENV_FILE }}" ]; then
-            echo "ERROR: ENV_FILE secret is not set in the environment. Aborting." >&2
-            exit 1
-          fi
-
-          # create .env from the secret (preserve newlines)
-          printf '%s\n' "${{ secrets.ENV_FILE }}" > .env
-
-          # Export variables from .env for subprocesses
-          set -a
-          # shellcheck disable=SC1091
-          source .env
-          set +a
-
-          # If the .env points to a different DB host (for example 'db'), override
-          # the Postgres-related env vars here so Django connects to the
-          # GitHub Actions Postgres service which is reachable on localhost:5432.
-          export POSTGRES_HOST=127.0.0.1
-          export POSTGRES_PORT=5432
-          # Ensure credentials match the service container values above
-          export POSTGRES_USER=study_user
-          export POSTGRES_PASSWORD=securepassword123
-          export POSTGRES_DB=study_db
-
-          # Wait a short time for Postgres service to become healthy
-          echo "Waiting for Postgres to accept connections on localhost:5432..."
-          for i in {1..20}; do
-            if timeout 1 bash -c "</dev/tcp/127.0.0.1/5432" >/dev/null 2>&1; then
-              echo "Postgres is accepting connections"
-              break
-            fi
-            echo "Postgres not ready yet, sleeping... ($i)"
+          echo "Waiting for Postgres to become available..."
+          until pg_isready -h 127.0.0.1 -p 5432 -U test_user; do
             sleep 1
           done
 
           export PYTHONPATH="${PWD}/backend:${PYTHONPATH}"
+
           pytest tests \
             --cov=core \
             --cov-report=html:cov_html \
@@ -104,35 +87,39 @@ jobs:
   build-push:
     needs: backend-ci
     runs-on: ubuntu-latest
-    # This job builds and pushes backend/frontend images to GitHub Container Registry (GHCR).
-    steps:
-      - name: Compute lowercased repository owner
-        id: owner
-        run: |
-          echo "owner_lower=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+    environment: production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
+    steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Login to GHCR
-        uses: docker/login-action@v2
+      - name: Azure login
+        uses: azure/login@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build and push backend image to GHCR
+      - name: ACR login
+        run: |
+          ACR_NAME=$(echo "${{ secrets.ACR_LOGIN_SERVER }}" | cut -d'.' -f1)
+          az acr login --name "$ACR_NAME"
+
+      - name: Build and push backend image
         uses: docker/build-push-action@v4
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-backend:${{ github.sha }},ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-backend:latest
+          tags: |
+            ${{ secrets.ACR_LOGIN_SERVER }}/note-takingapp-backend:${{ github.sha }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/note-takingapp-backend:latest
 
-      - name: Build and push frontend image to GHCR
+      - name: Build and push frontend image
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-frontend:${{ github.sha }},ghcr.io/${{ steps.owner.outputs.owner_lower }}/note-taking-app-frontend:latest
+          tags: |
+            ${{ secrets.ACR_LOGIN_SERVER }}/note-takingapp-frontend:${{ github.sha }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/note-takingapp-frontend:latest
