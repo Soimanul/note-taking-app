@@ -60,6 +60,7 @@ module "backend_app" {
     DEBUG                  = "False"
     DJANGO_SETTINGS_MODULE = "config.settings"
     ALLOWED_HOSTS          = "*"
+    CORS_ALLOWED_ORIGINS   = "https://frontend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io"
   }
   
   secrets = {

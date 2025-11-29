@@ -182,8 +182,17 @@ LOGIN_REDIRECT_URL = '/api/documents/'
 # CORS Configuration for Azure Container Apps
 # ==============================================================================
 
+# Read allowed origins from environment variable (comma-separated)
+# Default includes Azure Container Apps URL and localhost for dev
+CORS_ALLOWED_ORIGINS_STR = os.environ.get(
+    'CORS_ALLOWED_ORIGINS',
+    'https://frontend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io'
+)
+
 CORS_ALLOWED_ORIGINS = [
-    "https://frontend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io",
+    origin.strip() 
+    for origin in CORS_ALLOWED_ORIGINS_STR.split(',') 
+    if origin.strip()
 ]
 
 # For development, also allow localhost
@@ -191,6 +200,7 @@ if DEBUG:
     CORS_ALLOWED_ORIGINS += [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost",
     ]
 
 # Allow credentials (needed for JWT tokens in cookies/headers)

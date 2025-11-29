@@ -259,9 +259,3 @@ az postgres flexible-server execute \
   --database-name <db-name> \
   --querytext "SELECT version();"
 ```
-
-### References
-- [Azure Container Apps Documentation](https://learn.microsoft.com/azure/container-apps/)
-- [Azure Database for PostgreSQL](https://learn.microsoft.com/azure/postgresql/)
-- [Azure Cache for Redis](https://learn.microsoft.com/azure/azure-cache-for-redis/)
-- [Terraform AzureRM Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
