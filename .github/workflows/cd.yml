@@ -44,11 +44,24 @@ jobs:
       - name: Terraform plan
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
+          TF_VAR_django_secret_key: ${{ secrets.DJANGO_SECRET_KEY }}
+          TF_VAR_google_api_key: ${{ secrets.GOOGLE_API_KEY }}
+          TF_VAR_pinecone_api_key: ${{ secrets.PINECONE_API_KEY }}
           IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
           terraform plan -input=false \
             -var="backend_image=${{ secrets.ACR_LOGIN_SERVER }}/note-takingapp-backend:${IMAGE_SHA}" \
             -var="frontend_image=${{ secrets.ACR_LOGIN_SERVER }}/note-takingapp-frontend:${IMAGE_SHA}"
+        
+      - name: Save plan output
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform show -no-color > plan.txt
+        
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: ${{ env.TF_WORKING_DIR }}/plan.txt
 
   terraform-apply:
     needs: terraform-plan
