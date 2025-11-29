@@ -99,10 +99,10 @@ output "name" {
 
 output "url" {
   description = "Container App URL (if ingress enabled)"
-  value       = var.ingress_enabled ? "https://${azurerm_container_app.main.latest_revision_fqdn}" : ""
+  value       = var.ingress_enabled ? "https://${azurerm_container_app.main.ingress[0].fqdn}" : ""
 }
 
 output "fqdn" {
   description = "Container App FQDN"
-  value       = var.ingress_enabled ? azurerm_container_app.main.latest_revision_fqdn : ""
+  value       = var.ingress_enabled ? azurerm_container_app.main.ingress[0].fqdn : ""
 }
