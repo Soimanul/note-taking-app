@@ -134,19 +134,19 @@ def process_document(document_id):
         raise ConnectionError("AI services are not initialized.")
 
     try:
-        # Import default_storage inside the task to ensure it uses the correct backend
-        # based on environment variables in the forked worker process
-        from django.core.files.storage import default_storage
+        # Get storage backend dynamically to ensure Celery fork workers use correct settings
+        from django.core.files.storage import storages
+        storage = storages['default']
         
         doc = Document.objects.get(id=document_id)
         
         print(f"Processing document: {doc.filename} (ID: {document_id})")
         print(f"Storage filepath: {doc.filepath}")
-        print(f"Storage backend: {default_storage.__class__.__name__}")
+        print(f"Storage backend: {storage.__class__.__name__}")
 
         # Download file from storage to temporary location
         # This works with both Azure Blob Storage and local filesystem
-        with default_storage.open(doc.filepath, 'rb') as storage_file:
+        with storage.open(doc.filepath, 'rb') as storage_file:
             with tempfile.NamedTemporaryFile(delete=False, suffix=f".{doc.fileType}") as temp_file:
                 temp_file.write(storage_file.read())
                 temp_path = temp_file.name
