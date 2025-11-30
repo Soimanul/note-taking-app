@@ -50,16 +50,13 @@ def health_check(request):
 
 def _save_uploaded_file(uploaded_file: UploadedFile) -> dict:
     """
-    Saves the uploaded file using Django's default storage backend.
-    This automatically uses Azure Blob Storage in production or local filesystem in development.
+    Saves the uploaded file to the mounted Azure Files volume.
+    Files are stored at /app/media/uploads/ which is shared between backend and worker.
     """
-
-    # Get storage backend dynamically to ensure correct configuration is used
-    from django.core.files.storage import storages
-    storage = storages['default']
+    from django.core.files.storage import default_storage
     
-    filename = storage.get_available_name(f"uploads/{uploaded_file.name}")
-    saved_path = storage.save(filename, uploaded_file)
+    filename = default_storage.get_available_name(f"uploads/{uploaded_file.name}")
+    saved_path = default_storage.save(filename, uploaded_file)
 
     return {
         "filename": uploaded_file.name,
@@ -181,12 +178,11 @@ class DocumentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
         """
         Delete to clean up associated files and ensure cascade deletion.
         """
-        from django.core.files.storage import storages
-        storage = storages['default']
+        from django.core.files.storage import default_storage
 
-        if instance.filepath and storage.exists(instance.filepath):
+        if instance.filepath and default_storage.exists(instance.filepath):
             try:
-                storage.delete(instance.filepath)
+                default_storage.delete(instance.filepath)
             except Exception:
                 pass
 

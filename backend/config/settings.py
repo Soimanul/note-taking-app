@@ -239,22 +239,12 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 # File Storage Configuration
 # ==============================================================================
 
-# Azure Blob Storage configuration for production
-AZURE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME', '').strip()
-AZURE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY', '').strip()
-AZURE_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media').strip() or 'media'
+# Using Azure Files mounted as volume at /app/media
+# This provides shared storage between backend and worker containers
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
-    # Use Azure Blob Storage in production
-    DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
-    AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
-    MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
-    print(f"✓ Using Azure Blob Storage: {AZURE_ACCOUNT_NAME}/{AZURE_CONTAINER}")
-else:
-    # Use local filesystem for development
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    print(f"⚠ WARNING: Using local filesystem storage (AZURE_ACCOUNT_NAME='{AZURE_ACCOUNT_NAME}', AZURE_ACCOUNT_KEY={'set' if AZURE_ACCOUNT_KEY else 'not set'})")
+print(f"✓ Using filesystem storage at: {MEDIA_ROOT}")
 
 # ==============================================================================
 # Startup Validation

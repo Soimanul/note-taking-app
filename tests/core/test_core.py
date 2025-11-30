@@ -88,21 +88,15 @@ class CeleryTaskTests(APITestCase):
         )
 
     # We use @patch to replace external calls with mock objects during the test
-    @patch('django.core.files.storage.storages')
     @patch('core.services.pinecone_index')
     @patch('core.services.embedding_model')
     @patch('core.services.ai_adapter')
     @patch('core.tasks.get_parser')
-    def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone, mock_storages):
+    def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone):
         """
         Test the successful execution of the `process_document` task.
+        Files are read directly from filesystem (mounted Azure Files volume).
         """
-        # Mock the storage to return fake file content
-        mock_storage = MagicMock()
-        mock_storages.__getitem__.return_value = mock_storage
-        mock_file = MagicMock()
-        mock_file.read.return_value = b"fake pdf content"
-        mock_storage.open.return_value.__enter__.return_value = mock_file
 
         # Configure the return values of our mocks
         mock_parser = MagicMock()
@@ -132,24 +126,17 @@ class CeleryTaskTests(APITestCase):
         self.assertTrue(Log.objects.filter(document=self.document, level='INFO').exists())
 
         # Check that our mocks were called
-        mock_storage.open.assert_called_once_with(self.document.filepath, 'rb')
         mock_get_parser.assert_called_once_with(self.document.fileType)
         mock_ai_adapter.generate_notes.assert_called_once()
         mock_embedding.encode.assert_called_once()
         mock_pinecone.upsert.assert_called_once()
 
-    @patch('django.core.files.storage.storages')
     @patch('core.tasks.get_parser')
-    def test_process_document_failure_path(self, mock_get_parser, mock_storages):
+    def test_process_document_failure_path(self, mock_get_parser):
         """
         Test the failure path of the `process_document` task (e.g., parsing fails).
+        Files are read directly from filesystem (mounted Azure Files volume).
         """
-        # Mock the storage to return fake file content
-        mock_storage = MagicMock()
-        mock_storages.__getitem__.return_value = mock_storage
-        mock_file = MagicMock()
-        mock_file.read.return_value = b"fake pdf content"
-        mock_storage.open.return_value.__enter__.return_value = mock_file
 
         # Configure the parser.parse to raise an exception, simulating a failure
         mock_parser = MagicMock()

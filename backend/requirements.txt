@@ -27,8 +27,5 @@ pinecone
 gunicorn
 whitenoise
 
-# Azure Blob Storage for file uploads
-django-storages[azure]==1.14.2
-
 # Metrics Collection
 django-prometheus

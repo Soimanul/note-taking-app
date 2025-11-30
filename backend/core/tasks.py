@@ -134,45 +134,34 @@ def process_document(document_id):
         raise ConnectionError("AI services are not initialized.")
 
     try:
-        # Get storage backend dynamically to ensure Celery fork workers use correct settings
-        from django.core.files.storage import storages
-        storage = storages['default']
-        
         doc = Document.objects.get(id=document_id)
         
         print(f"Processing document: {doc.filename} (ID: {document_id})")
-        print(f"Storage filepath: {doc.filepath}")
-        print(f"Storage backend: {storage.__class__.__name__}")
+        print(f"File path: {doc.filepath}")
 
-        # Download file from storage to temporary location
-        # This works with both Azure Blob Storage and local filesystem
-        with storage.open(doc.filepath, 'rb') as storage_file:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{doc.fileType}") as temp_file:
-                temp_file.write(storage_file.read())
-                temp_path = temp_file.name
+        # File is directly accessible on mounted Azure Files volume
+        # No need for temporary files - parse directly from mounted storage
+        filepath = doc.filepath.path  # e.g., /app/media/uploads/file.pdf
+        print(f"Reading file from: {filepath}")
+        
+        parser = get_parser(doc.fileType)
+        extracted_text = parser.parse(filepath)
+        print(
+            f"File parsed successfully. Text length: {len(extracted_text)} characters."
+        )
 
-        try:
-            parser = get_parser(doc.fileType)
-            extracted_text = parser.parse(temp_path)
-            print(
-                f"File parsed successfully. Text length: {len(extracted_text)} characters."
-            )
+        _generate_and_save_notes(doc, extracted_text)
+        _generate_and_upsert_embedding(doc, extracted_text)
 
-            _generate_and_save_notes(doc, extracted_text)
-            _generate_and_upsert_embedding(doc, extracted_text)
-
-            doc.status = "completed"
-            doc.save()
-            Log.objects.create(
-                user=doc.user,
-                document=doc,
-                level="INFO",
-                message=f'Document "{doc.filename}" processed successfully.',
-            )
-            print("Document status updated to 'completed'.")
-        finally:
-            # Clean up temporary file
-            os.unlink(temp_path)
+        doc.status = "completed"
+        doc.save()
+        Log.objects.create(
+            user=doc.user,
+            document=doc,
+            level="INFO",
+            message=f'Document "{doc.filename}" processed successfully.',
+        )
+        print("Document status updated to 'completed'.")
 
     except Document.DoesNotExist:
         print(f"Document with id={document_id} not found.")
