@@ -249,10 +249,12 @@ if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
     DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
     AZURE_CUSTOM_DOMAIN = f'{AZURE_ACCOUNT_NAME}.blob.core.windows.net'
     MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/'
+    print(f"✓ Using Azure Blob Storage: {AZURE_ACCOUNT_NAME}/{AZURE_CONTAINER}")
 else:
     # Use local filesystem for development
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    print("⚠ WARNING: Using local filesystem storage (Azure credentials not found)")
 
 # ==============================================================================
 # Startup Validation

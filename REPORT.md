@@ -1077,6 +1077,58 @@ The system is production-ready and can handle real-world traffic with proper mon
 
 ---
 
+## AI-Assisted Development
+
+Throughout this project, I used AI assistance to solve specific technical problems and improve code quality. Below are examples of how AI helped me work through real challenges:
+
+### Example 1: Debugging CORS Issues
+
+**My Question:**
+"The frontend is getting CORS errors when trying to call the backend API. Both are deployed on Azure Container Apps with different subdomains. I set `CORS_ALLOWED_ORIGINS` to `https://*.azurecontainerapps.io` but it's not working."
+
+**AI Response:**
+The django-cors-headers library doesn't support wildcards in `CORS_ALLOWED_ORIGINS`. You need to use `CORS_ALLOWED_ORIGIN_REGEXES` instead with a regex pattern. Change your settings.py to:
+
+```python
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.azurecontainerapps\.io$",
+]
+```
+
+### Example 2: Container App Authentication to ACR
+
+**My Question:**
+"How do I configure my Azure Container Apps to pull images from a private Azure Container Registry without storing passwords?"
+
+**AI Response:**
+Use a user-assigned managed identity with the AcrPull role. Create the identity in Terraform, assign it the role on your ACR, then reference it in your container app configuration. The container app will authenticate automatically without credentials.
+
+### Example 3: Shared File Storage Problem
+
+**My Question:**
+"My Celery worker needs to process files that users upload through the Django backend, but the files aren't available because they're in different containers. What's the solution?"
+
+**AI Response:**
+Each container has its own filesystem. For shared file access, you need external storage. Use Azure Blob Storage with django-storages. Configure it in settings.py with your storage account credentials, and both containers will access the same files.
+
+### Example 4: Gunicorn Worker Timeout
+
+**My Question:**
+"My backend container keeps showing 'WORKER TIMEOUT' errors in the logs. The stack trace shows it's happening during imports of sentence-transformers and scipy. What's causing this?"
+
+**AI Response:**
+Those ML libraries take a long time to import (30+ seconds). Your Gunicorn workers are timing out because the default timeout is 30 seconds. You need to either increase the timeout with `--timeout 300`, use the `--preload` flag to load the app before forking workers, or implement lazy imports so these heavy libraries only load when actually needed in background tasks.
+
+### Example 5: Terraform State Backend Configuration
+
+**My Question:**
+"My GitHub Actions CD pipeline fails at terraform init with an error about the backend configuration. The state file key seems empty. How do I fix this?"
+
+**AI Response:**
+You need to set the `TF_STATE_KEY` variable in your GitHub repository. Go to Settings → Secrets and variables → Variables, and add a new variable named `TF_STATE_KEY` with a value like `note-taking-app.terraform.tfstate`. Then your terraform init command will use this value via the `-backend-config="key=${TF_STATE_KEY}"` parameter.
+
+---
+
 ## Appendix
 
 ### Useful Commands
@@ -1094,47 +1146,6 @@ python manage.py runserver
 
 # Run Celery worker
 celery -A config worker --loglevel=info
-
-# ============================================
-# Azure CLI Commands
-# ============================================
-
-# View Container App logs (streaming)
-az containerapp logs show \
-  --name backend-notetakingapp \
-  --resource-group BCSAI2025-DEVOPS-STUDENTS-A \
-  --follow
-
-# View specific container logs
-az containerapp logs show \
-  --name worker-notetakingapp \
-  --resource-group BCSAI2025-DEVOPS-STUDENTS-A \
-  --tail 100
-
-# Execute command in running container
-az containerapp exec \
-  --name backend-notetakingapp \
-  --resource-group BCSAI2025-DEVOPS-STUDENTS-A \
-  --command bash
-
-# List container app revisions
-az containerapp revision list \
-  --name backend-notetakingapp \
-  --resource-group BCSAI2025-DEVOPS-STUDENTS-A \
-  --output table
-
-# ============================================
-# GitHub CLI Commands
-# ============================================
-
-# Manually trigger CD workflow
-gh workflow run cd.yml -f sha=$(git rev-parse HEAD)
-
-# List recent workflow runs
-gh run list --limit 10
-
-# View specific workflow run
-gh run view <run-id> --log
 
 # ============================================
 # Terraform Commands
@@ -1193,15 +1204,6 @@ sudo systemctl start grafana-server  # Linux
 # Query Prometheus metrics
 curl https://backend-notetakingapp.ambitiousbeach-17fb98e0.westeurope.azurecontainerapps.io/metrics
 ```
-
-### Reference Links
-
-- **Azure Container Apps Documentation**: https://learn.microsoft.com/en-us/azure/container-apps/
-- **Terraform Azure Provider**: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
-- **Django Prometheus**: https://github.com/korfuri/django-prometheus
-- **django-storages Azure**: https://django-storages.readthedocs.io/en/latest/backends/azure.html
-- **Prometheus Query Examples**: https://prometheus.io/docs/prometheus/latest/querying/examples/
-- **Grafana Dashboards**: https://grafana.com/grafana/dashboards/
 
 ---
 

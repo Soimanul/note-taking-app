@@ -136,6 +136,10 @@ def process_document(document_id):
 
     try:
         doc = Document.objects.get(id=document_id)
+        
+        print(f"Processing document: {doc.filename} (ID: {document_id})")
+        print(f"Storage filepath: {doc.filepath}")
+        print(f"Storage backend: {default_storage.__class__.__name__}")
 
         # Download file from storage to temporary location
         # This works with both Azure Blob Storage and local filesystem
