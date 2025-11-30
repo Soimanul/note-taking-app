@@ -73,7 +73,7 @@ module "backend_app" {
     DEBUG                  = "False"
     DJANGO_SETTINGS_MODULE = "config.settings"
     ALLOWED_HOSTS          = "*"
-    CORS_ALLOWED_ORIGINS   = module.frontend_app.url
+    # CORS_ALLOWED_ORIGINS uses wildcard default in settings.py
   }
   
   secrets = {
