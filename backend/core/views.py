@@ -116,14 +116,14 @@ class UserCreate(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
-    
+
     def create(self, request, *args, **kwargs):
         print(f"Registration request data: {request.data}")
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             print(f"Serializer errors: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
@@ -131,13 +131,34 @@ class UserCreate(generics.CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except Exception as e:
             print(f"User creation failed: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==============================================================================
+#  2. Document List & Create View
+# ==============================================================================
+class DocumentListCreate(generics.ListCreateAPIView):
+    """
+    Handles GET (list all) and POST (create new) requests for documents.
+    """
+
+    serializer_class = DocumentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        """
+        This view should return a list of all documents for the currently authenticated user.
+        """
+        return Document.objects.filter(user=self.request.user)
+
     def create(self, request, *args, **kwargs):
         """
         1. Saves the file.
         2. Creates the database record.
-        3. Triggers the async processing task.        
+        3. Triggers the async processing task.
         """
-        
+
         try:
             # Save the file locally
             uploaded_file = request.FILES.get('file')
@@ -145,13 +166,13 @@ class UserCreate(generics.CreateAPIView):
                 return Response({"detail": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST)
 
             print(f"Received file upload: {uploaded_file.name}, size: {uploaded_file.size}")
-            
+
             file_metadata = _save_uploaded_file(uploaded_file)
-            
+
             serializer = self.get_serializer(data=file_metadata)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
-            
+
             new_document_id = serializer.instance.id
             print(f"Document created with ID: {new_document_id}, triggering processing task")
             process_document.delay(str(new_document_id))
@@ -163,37 +184,14 @@ class UserCreate(generics.CreateAPIView):
             import traceback
             traceback.print_exc()
             return Response(
-                {"detail": f"File upload failed: {str(e)}"}, 
+                {"detail": f"File upload failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        """
-        1. Saves the file.
-        2. Creates the database record.
-        3. Triggers the async processing task.        
-        """
-        
-        # Save the file locally
-        uploaded_file = request.FILES.get('file')
-        if not uploaded_file:
-            return Response({"detail": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST)
-
-        file_metadata = _save_uploaded_file(uploaded_file)
-        
-        serializer = self.get_serializer(data=file_metadata)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        
-        new_document_id = serializer.instance.id
-        process_document.delay(str(new_document_id))
-
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         """
         This view assigns the user automatically when a new doc is created.
         """
-
         serializer.save(user=self.request.user)
 
 
