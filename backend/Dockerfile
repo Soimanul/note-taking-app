@@ -37,13 +37,16 @@ RUN mkdir -p /app/media/uploads /app/staticfiles /home/appuser/.cache && \
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh && \
+    chown appuser:appgroup /app/docker-entrypoint.sh
+
 # Switch to non-root user
 USER appuser
 
 # Expose port
 EXPOSE 8000
 
-# Set the default command to run the Django server with Gunicorn
-# --timeout 300: Allow 300 seconds (5 minutes) for worker to handle requests (needed for ML library imports)
-# --preload: Load application code before forking workers (speeds up first request)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "300", "--preload", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info", "config.wsgi:application"]
+# Set the entrypoint to run migrations before starting Gunicorn
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

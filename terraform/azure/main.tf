@@ -43,6 +43,14 @@ module "redis" {
   create              = var.create_redis
 }
 
+// Storage Account for media files (shared between backend and worker)
+module "storage" {
+  source              = "./modules/storage"
+  resource_group_name = var.resource_group_name
+  location            = local.location
+  create              = true
+}
+
 // Container Apps: backend (Django web server)
 module "backend_app" {
   source              = "./modules/containerapp"
@@ -67,21 +75,25 @@ module "backend_app" {
   }
   
   secrets = {
-    SECRET_KEY       = var.django_secret_key
-    GOOGLE_API_KEY   = var.google_api_key
-    PINECONE_API_KEY = var.pinecone_api_key
-    POSTGRES_HOST    = module.postgres.postgres_host
-    POSTGRES_PORT    = "5432"
-    POSTGRES_DB      = module.postgres.postgres_database
-    POSTGRES_USER    = module.postgres.postgres_user
-    POSTGRES_PASSWORD = module.postgres.postgres_password
-    REDIS_URL        = module.redis.redis_url
+    SECRET_KEY                 = var.django_secret_key
+    GOOGLE_API_KEY             = var.google_api_key
+    PINECONE_API_KEY           = var.pinecone_api_key
+    POSTGRES_HOST              = module.postgres.postgres_host
+    POSTGRES_PORT              = "5432"
+    POSTGRES_DB                = module.postgres.postgres_database
+    POSTGRES_USER              = module.postgres.postgres_user
+    POSTGRES_PASSWORD          = module.postgres.postgres_password
+    REDIS_URL                  = module.redis.redis_url
+    AZURE_STORAGE_ACCOUNT_NAME = module.storage.account_name
+    AZURE_STORAGE_ACCOUNT_KEY  = module.storage.account_key
+    AZURE_STORAGE_CONTAINER    = module.storage.container_name
   }
 
   depends_on = [
     module.assign_acr_pull,
     module.postgres,
-    module.redis
+    module.redis,
+    module.storage
   ]
 }
 
@@ -106,21 +118,25 @@ module "worker_app" {
   }
   
   secrets = {
-    SECRET_KEY        = var.django_secret_key
-    GOOGLE_API_KEY    = var.google_api_key
-    PINECONE_API_KEY  = var.pinecone_api_key
-    POSTGRES_HOST     = module.postgres.postgres_host
-    POSTGRES_PORT     = "5432"
-    POSTGRES_DB       = module.postgres.postgres_database
-    POSTGRES_USER     = module.postgres.postgres_user
-    POSTGRES_PASSWORD = module.postgres.postgres_password
-    REDIS_URL         = module.redis.redis_url
+    SECRET_KEY                 = var.django_secret_key
+    GOOGLE_API_KEY             = var.google_api_key
+    PINECONE_API_KEY           = var.pinecone_api_key
+    POSTGRES_HOST              = module.postgres.postgres_host
+    POSTGRES_PORT              = "5432"
+    POSTGRES_DB                = module.postgres.postgres_database
+    POSTGRES_USER              = module.postgres.postgres_user
+    POSTGRES_PASSWORD          = module.postgres.postgres_password
+    REDIS_URL                  = module.redis.redis_url
+    AZURE_STORAGE_ACCOUNT_NAME = module.storage.account_name
+    AZURE_STORAGE_ACCOUNT_KEY  = module.storage.account_key
+    AZURE_STORAGE_CONTAINER    = module.storage.container_name
   }
 
   depends_on = [
     module.assign_acr_pull,
     module.postgres,
-    module.redis
+    module.redis,
+    module.storage
   ]
 }
 
