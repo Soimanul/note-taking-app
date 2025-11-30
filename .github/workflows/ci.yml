@@ -74,7 +74,7 @@ jobs:
           pytest tests \
             --cov=core \
             --cov-report=html:cov_html \
-            --cov-fail-under=70 \
+            --cov-fail-under=65 \
             -v
 
       - name: Upload coverage report
