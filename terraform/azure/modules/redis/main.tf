@@ -34,7 +34,7 @@ output "redis_primary_key" {
 }
 
 output "redis_url" {
-  description = "Redis connection URL"
-  value       = var.create ? "rediss://:${azurerm_redis_cache.main[0].primary_access_key}@${azurerm_redis_cache.main[0].hostname}:${azurerm_redis_cache.main[0].ssl_port}/0" : ""
+  description = "Redis connection URL with SSL cert requirements"
+  value       = var.create ? "rediss://:${azurerm_redis_cache.main[0].primary_access_key}@${azurerm_redis_cache.main[0].hostname}:${azurerm_redis_cache.main[0].ssl_port}/0?ssl_cert_reqs=CERT_NONE" : ""
   sensitive   = true
 }
