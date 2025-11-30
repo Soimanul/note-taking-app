@@ -61,7 +61,6 @@ module "backend_app" {
     transport              = "HTTP"
     port                   = 8000
     path                   = "/health/"
-    initial_delay_seconds  = 10   # Wait 10 seconds before first probe
     period_seconds         = 10   # Check every 10 seconds
     timeout_seconds        = 5    # Allow 5 seconds for response
     failure_threshold      = 10   # Allow 10 failures before giving up (100 seconds total)
