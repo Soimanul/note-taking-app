@@ -251,8 +251,13 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 
 import sys
 
-# Validate critical environment variables on startup (but not during migrations or tests)
-if 'migrate' not in sys.argv and 'makemigrations' not in sys.argv and 'pytest' not in sys.argv[0]:
+# Validate critical environment variables on startup (but not during migrations, tests, or collectstatic)
+if (
+    'migrate' not in sys.argv
+    and 'makemigrations' not in sys.argv
+    and 'collectstatic' not in sys.argv
+    and 'pytest' not in sys.argv[0]
+):
     required_vars = ['SECRET_KEY', 'POSTGRES_HOST', 'REDIS_URL']
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
 
