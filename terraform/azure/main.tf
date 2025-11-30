@@ -56,6 +56,8 @@ module "backend_app" {
   target_port         = 8000
   command             = []  // Uses Dockerfile's default CMD (gunicorn)
   min_replicas        = 1
+  cpu                 = 2.0
+  memory              = "4Gi"
 
   env_vars = {
     DEBUG                  = "False"
@@ -95,6 +97,8 @@ module "worker_app" {
   ingress_enabled     = false  // Worker doesn't need HTTP ingress
   command             = ["celery", "-A", "config", "worker", "-l", "info", "--concurrency=2"]
   min_replicas        = 1
+  cpu                 = 2.0
+  memory              = "4Gi"
 
   env_vars = {
     DEBUG                  = "False"

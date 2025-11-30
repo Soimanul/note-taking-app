@@ -215,6 +215,12 @@ class SemanticSearchView(APIView):
         if not query:
             return Response({"detail": "A search query parameter 'q' is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Initialize ML services if not already done
+        services.initialize_ml_services()
+        
+        if not services.embedding_model:
+            return Response({"detail": "Search service is not available."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
         # Generate an embedding for the search query to compare with
         query_embedding = services.embedding_model.encode(query).tolist()
 

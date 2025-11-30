@@ -124,6 +124,9 @@ def process_document(document_id):
     2. Generates structured notes.
     3. Creates and stores an embedding.
     """
+    # Initialize ML services lazily (only when task runs)
+    services.initialize_ml_services()
+    
     if not all(
         [services.ai_adapter, services.embedding_model, services.pinecone_index]
     ):

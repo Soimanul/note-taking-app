@@ -2,8 +2,25 @@ import os
 from abc import ABC, abstractmethod
 import json
 import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
-import pinecone
+
+# Lazy imports for heavy ML libraries - only imported when needed
+# This prevents slow startup times and worker timeouts
+_sentence_transformers = None
+_pinecone = None
+
+def _get_sentence_transformers():
+    global _sentence_transformers
+    if _sentence_transformers is None:
+        from sentence_transformers import SentenceTransformer
+        _sentence_transformers = SentenceTransformer
+    return _sentence_transformers
+
+def _get_pinecone():
+    global _pinecone
+    if _pinecone is None:
+        import pinecone
+        _pinecone = pinecone
+    return _pinecone
 
 
 # ==============================================================================
@@ -167,18 +184,31 @@ class GeminiAdapter(GenerativeAIAdapter):
 
 ai_adapter: GenerativeAIAdapter = GeminiAdapter()
 
-try:
-    embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+# Lazy initialization - these will be loaded on first use
+embedding_model = None
+pinecone_index = None
 
-    # Pinecone Vector DB
-    pinecone_api_key = os.environ.get("PINECONE_API_KEY")
-    if not pinecone_api_key:
-        raise ValueError("PINECONE_API_KEY not set.")
-    pc = pinecone.Pinecone(api_key=pinecone_api_key)
-    pinecone_index = pc.Index("documents")
+def initialize_ml_services():
+    """Initialize ML services (embedding model and Pinecone) lazily."""
+    global embedding_model, pinecone_index
+    
+    if embedding_model is not None and pinecone_index is not None:
+        return  # Already initialized
+    
+    try:
+        SentenceTransformer = _get_sentence_transformers()
+        embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    print("Embedding model and Pinecone client initialized successfully.")
-except Exception as e:
-    print(f"Error initializing services: {e}")
-    embedding_model = None
-    pinecone_index = None
+        # Pinecone Vector DB
+        pinecone_api_key = os.environ.get("PINECONE_API_KEY")
+        if not pinecone_api_key:
+            raise ValueError("PINECONE_API_KEY not set.")
+        pinecone = _get_pinecone()
+        pc = pinecone.Pinecone(api_key=pinecone_api_key)
+        pinecone_index = pc.Index("documents")
+
+        print("Embedding model and Pinecone client initialized successfully.")
+    except Exception as e:
+        print(f"Error initializing ML services: {e}")
+        embedding_model = None
+        pinecone_index = None
