@@ -23,7 +23,7 @@ class DocumentAPITests(APITestCase):
 
         # Create a document owned by user1
         self.doc1 = Document.objects.create(
-            user=self.user1, filename='doc1.pdf', filepath='/fake/path1.pdf', fileType='pdf', size=1024
+            user=self.user1, filename='doc1.pdf', filepath='uploads/doc1.pdf', fileType='pdf', size=1024
         )
 
     def test_list_documents_as_authenticated_user(self):
@@ -81,21 +81,27 @@ class CeleryTaskTests(APITestCase):
         self.document = Document.objects.create(
             user=self.user,
             filename='celery_test.pdf',
-            filepath='/fake/celery_test.pdf',
+            filepath='uploads/celery_test.pdf',  # Storage-agnostic path
             fileType='pdf',
             size=4096,
             status='processing'
         )
 
     # We use @patch to replace external calls with mock objects during the test
+    @patch('core.tasks.default_storage')
     @patch('core.services.pinecone_index')
     @patch('core.services.embedding_model')
     @patch('core.services.ai_adapter')
     @patch('core.tasks.get_parser')
-    def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone):
+    def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone, mock_storage):
         """
         Test the successful execution of the `process_document` task.
         """
+        # Mock the storage to return fake file content
+        mock_file = MagicMock()
+        mock_file.read.return_value = b"fake pdf content"
+        mock_storage.open.return_value.__enter__.return_value = mock_file
+
         # Configure the return values of our mocks
         mock_parser = MagicMock()
         mock_parser.parse.return_value = "This is the extracted text from the document."
@@ -107,7 +113,7 @@ class CeleryTaskTests(APITestCase):
         mock_encode_ret = MagicMock()
         mock_encode_ret.tolist.return_value = [0.1, 0.2, 0.3]
         mock_embedding.encode.return_value = mock_encode_ret
-        
+
         # Run the Celery task synchronously for testing
         process_document(self.document.id)
 
@@ -116,25 +122,31 @@ class CeleryTaskTests(APITestCase):
 
         # Assertions: Check if the task did what it was supposed to
         self.assertEqual(self.document.status, 'completed')
-        
+
         # Check that 'notes' were created (current processing flow saves notes)
         self.assertTrue(GeneratedContent.objects.filter(document=self.document, contentType='notes').exists())
-        
+
         # Check that a success log was created
         self.assertTrue(Log.objects.filter(document=self.document, level='INFO').exists())
 
         # Check that our mocks were called
+        mock_storage.open.assert_called_once_with(self.document.filepath, 'rb')
         mock_get_parser.assert_called_once_with(self.document.fileType)
-        mock_parser.parse.assert_called_once_with(self.document.filepath)
         mock_ai_adapter.generate_notes.assert_called_once()
         mock_embedding.encode.assert_called_once()
         mock_pinecone.upsert.assert_called_once()
 
+    @patch('core.tasks.default_storage')
     @patch('core.tasks.get_parser')
-    def test_process_document_failure_path(self, mock_get_parser):
+    def test_process_document_failure_path(self, mock_get_parser, mock_storage):
         """
         Test the failure path of the `process_document` task (e.g., parsing fails).
         """
+        # Mock the storage to return fake file content
+        mock_file = MagicMock()
+        mock_file.read.return_value = b"fake pdf content"
+        mock_storage.open.return_value.__enter__.return_value = mock_file
+
         # Configure the parser.parse to raise an exception, simulating a failure
         mock_parser = MagicMock()
         mock_parser.parse.side_effect = Exception("Failed to parse PDF")
