@@ -147,7 +147,8 @@ def process_document(document_id):
 
         # Download file from storage to temporary location
         # This works with both Azure Blob Storage and local filesystem
-        with default_storage.open(doc.filepath, 'rb') as storage_file:doc.fileType}") as temp_file:
+        with default_storage.open(doc.filepath, 'rb') as storage_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{doc.fileType}") as temp_file:
                 temp_file.write(storage_file.read())
                 temp_path = temp_file.name
 
