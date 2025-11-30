@@ -70,27 +70,37 @@ class GeminiAdapter(GenerativeAIAdapter):
             # List all available models
             available_models = genai.list_models()
 
-            # Filter for Flash models that support generateContent
-            flash_models = [
+            # Filter specifically for GEMINI Flash models that support generateContent
+            # Must contain both "gemini" AND "flash" to exclude other models like LearnLM
+            gemini_flash_models = [
                 model for model in available_models
-                if 'flash' in model.name.lower()
+                if 'gemini' in model.name.lower()
+                and 'flash' in model.name.lower()
                 and 'generateContent' in model.supported_generation_methods
             ]
 
-            if flash_models:
-                # Sort by name to get the latest version (assumes newer versions have higher version numbers)
+            if gemini_flash_models:
+                # Prefer stable alias first (gemini-flash-latest)
+                for model in gemini_flash_models:
+                    if 'gemini-flash-latest' in model.name.lower():
+                        model_name = model.name.split('/')[-1]
+                        print(f"Available Gemini Flash models: {[m.name for m in gemini_flash_models[:5]]}")
+                        print(f"Selected model: {model_name}")
+                        return model_name
+
+                # If no stable alias, sort by version number to get latest
                 # Models are named like: models/gemini-2.5-flash, models/gemini-2.0-flash, etc.
-                flash_models.sort(key=lambda m: m.name, reverse=True)
-                latest_model = flash_models[0]
+                gemini_flash_models.sort(key=lambda m: m.name, reverse=True)
+                latest_model = gemini_flash_models[0]
 
                 # Extract just the model name (remove "models/" prefix if present)
                 model_name = latest_model.name.split('/')[-1]
 
-                print(f"Available Flash models: {[m.name for m in flash_models[:3]]}")
+                print(f"Available Gemini Flash models: {[m.name for m in gemini_flash_models[:5]]}")
                 print(f"Selected model: {model_name}")
                 return model_name
             else:
-                print("No Flash models found, using stable alias")
+                print("No Gemini Flash models found, using stable alias")
                 return "gemini-2.0-flash"
 
         except Exception as e:
