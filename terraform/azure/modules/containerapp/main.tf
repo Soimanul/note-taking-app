@@ -44,18 +44,26 @@ resource "azurerm_container_app" "main" {
       dynamic "startup_probe" {
         for_each = var.startup_probe != null ? [var.startup_probe] : []
         content {
-          transport = startup_probe.value.transport
-          port      = startup_probe.value.port
-          path      = lookup(startup_probe.value, "path", null)
+          transport             = startup_probe.value.transport
+          port                  = startup_probe.value.port
+          path                  = lookup(startup_probe.value, "path", null)
+          initial_delay         = lookup(startup_probe.value, "initial_delay_seconds", 3)
+          interval_seconds      = lookup(startup_probe.value, "period_seconds", 10)
+          timeout               = lookup(startup_probe.value, "timeout_seconds", 3)
+          failure_count_threshold = lookup(startup_probe.value, "failure_threshold", 3)
         }
       }
 
       dynamic "liveness_probe" {
         for_each = var.liveness_probe != null ? [var.liveness_probe] : []
         content {
-          transport = liveness_probe.value.transport
-          port      = liveness_probe.value.port
-          path      = lookup(liveness_probe.value, "path", null)
+          transport             = liveness_probe.value.transport
+          port                  = liveness_probe.value.port
+          path                  = lookup(liveness_probe.value, "path", null)
+          initial_delay         = lookup(liveness_probe.value, "initial_delay_seconds", 0)
+          interval_seconds      = lookup(liveness_probe.value, "period_seconds", 10)
+          timeout               = lookup(liveness_probe.value, "timeout_seconds", 1)
+          failure_count_threshold = lookup(liveness_probe.value, "failure_threshold", 3)
         }
       }
     }
