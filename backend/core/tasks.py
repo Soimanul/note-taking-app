@@ -1,6 +1,8 @@
 import os
+import tempfile
 from abc import ABC, abstractmethod
 from celery import shared_task
+from django.core.files.storage import default_storage
 import fitz
 import docx
 from .models import Document, GeneratedContent, Log
@@ -135,24 +137,35 @@ def process_document(document_id):
     try:
         doc = Document.objects.get(id=document_id)
 
-        parser = get_parser(doc.fileType)
-        extracted_text = parser.parse(doc.filepath)
-        print(
-            f"File parsed successfully. Text length: {len(extracted_text)} characters."
-        )
+        # Download file from storage to temporary location
+        # This works with both Azure Blob Storage and local filesystem
+        with default_storage.open(doc.filepath, 'rb') as storage_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{doc.fileType}") as temp_file:
+                temp_file.write(storage_file.read())
+                temp_path = temp_file.name
 
-        _generate_and_save_notes(doc, extracted_text)
-        _generate_and_upsert_embedding(doc, extracted_text)
+        try:
+            parser = get_parser(doc.fileType)
+            extracted_text = parser.parse(temp_path)
+            print(
+                f"File parsed successfully. Text length: {len(extracted_text)} characters."
+            )
 
-        doc.status = "completed"
-        doc.save()
-        Log.objects.create(
-            user=doc.user,
-            document=doc,
-            level="INFO",
-            message=f'Document "{doc.filename}" processed successfully.',
-        )
-        print("Document status updated to 'completed'.")
+            _generate_and_save_notes(doc, extracted_text)
+            _generate_and_upsert_embedding(doc, extracted_text)
+
+            doc.status = "completed"
+            doc.save()
+            Log.objects.create(
+                user=doc.user,
+                document=doc,
+                level="INFO",
+                message=f'Document "{doc.filename}" processed successfully.',
+            )
+            print("Document status updated to 'completed'.")
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_path)
 
     except Document.DoesNotExist:
         print(f"Document with id={document_id} not found.")

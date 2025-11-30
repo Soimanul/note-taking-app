@@ -9,7 +9,7 @@ User = get_user_model()
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.core.files.storage import FileSystemStorage
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import UploadedFile
 from django.db import models
 
@@ -51,21 +51,17 @@ def health_check(request):
 
 def _save_uploaded_file(uploaded_file: UploadedFile) -> dict:
     """
-    Saves the uploaded file to the local filesystem and returns its metadata.
+    Saves the uploaded file using Django's default storage backend.
+    This automatically uses Azure Blob Storage in production or local filesystem in development.
     """
-    
-    # Ensure the media/uploads directory exists
-    upload_dir = "media/uploads/"
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    fs = FileSystemStorage(location=upload_dir)
-    filename = fs.get_available_name(uploaded_file.name)
-    saved_path = fs.save(filename, uploaded_file)
-    filepath = os.path.abspath(fs.path(saved_path))
+
+    # Use Django's default storage (respects DEFAULT_FILE_STORAGE setting)
+    filename = default_storage.get_available_name(f"uploads/{uploaded_file.name}")
+    saved_path = default_storage.save(filename, uploaded_file)
 
     return {
         "filename": uploaded_file.name,
-        "filepath": filepath,
+        "filepath": saved_path,  # Storage key (e.g., "uploads/file.pdf")
         "fileType": os.path.splitext(uploaded_file.name)[1].lower().strip("."),
         "size": uploaded_file.size,
     }
@@ -183,13 +179,13 @@ class DocumentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
         """
         Delete to clean up associated files and ensure cascade deletion.
         """
-        
-        if instance.filepath and os.path.exists(instance.filepath):
+
+        if instance.filepath and default_storage.exists(instance.filepath):
             try:
-                os.remove(instance.filepath)
-            except OSError:
-                pass 
-        
+                default_storage.delete(instance.filepath)
+            except Exception:
+                pass
+
         instance.delete()
 
     def get_queryset(self):
