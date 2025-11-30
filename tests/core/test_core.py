@@ -97,6 +97,14 @@ class CeleryTaskTests(APITestCase):
         Test the successful execution of the `process_document` task.
         Files are read directly from filesystem (mounted Azure Files volume).
         """
+        import os
+        from django.conf import settings
+
+        # Create the actual file in the test media directory
+        filepath = os.path.join(settings.MEDIA_ROOT, self.document.filepath)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w') as f:
+            f.write("Test PDF content")
 
         # Configure the return values of our mocks
         mock_parser = MagicMock()
@@ -137,6 +145,14 @@ class CeleryTaskTests(APITestCase):
         Test the failure path of the `process_document` task (e.g., parsing fails).
         Files are read directly from filesystem (mounted Azure Files volume).
         """
+        import os
+        from django.conf import settings
+
+        # Create the actual file in the test media directory
+        filepath = os.path.join(settings.MEDIA_ROOT, self.document.filepath)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w') as f:
+            f.write("Test PDF content")
 
         # Configure the parser.parse to raise an exception, simulating a failure
         mock_parser = MagicMock()

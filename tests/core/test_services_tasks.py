@@ -45,7 +45,7 @@ def test_generate_and_upsert_embedding(db, monkeypatch):
     User = importlib.import_module("django.contrib.auth").get_user_model()
     user = User.objects.create_user(username="embuser", password="pass")
     Document = models.Document
-    doc = Document.objects.create(user=user, filename="f.txt", filepath="/tmp/f.txt", fileType="txt", size=1)
+    doc = Document.objects.create(user=user, filename="f.txt", filepath="uploads/f.txt", fileType="txt", size=1)
 
     # Mock embedding model and pinecone index
     fake_encode = MagicMock()
@@ -68,7 +68,7 @@ def test_generate_summary_and_quiz_from_notes(db, monkeypatch):
     GeneratedContent = models.GeneratedContent
     Log = models.Log
 
-    doc = Document.objects.create(user=user, filename="f4.txt", filepath="/tmp/f4.txt", fileType="txt", size=1)
+    doc = Document.objects.create(user=user, filename="f4.txt", filepath="uploads/f4.txt", fileType="txt", size=1)
     GeneratedContent.objects.create(document=doc, contentType="notes", contentData={"markdown_text": "abc"})
 
     # Mock ai_adapter
