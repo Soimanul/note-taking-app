@@ -18,6 +18,15 @@ resource "azurerm_container_app" "main" {
     min_replicas = var.min_replicas
     max_replicas = var.max_replicas
 
+    dynamic "volume" {
+      for_each = var.volume_mounts
+      content {
+        name         = volume.value.name
+        storage_type = volume.value.storage_type
+        storage_name = volume.value.storage_name
+      }
+    }
+
     container {
       name    = var.name
       image   = var.image
@@ -38,6 +47,14 @@ resource "azurerm_container_app" "main" {
         content {
           name        = env.key
           secret_name = replace(lower(env.key), "_", "-")
+        }
+      }
+
+      dynamic "volume_mounts" {
+        for_each = var.volume_mounts
+        content {
+          name = volume_mounts.value.name
+          path = volume_mounts.value.mount_path
         }
       }
     }

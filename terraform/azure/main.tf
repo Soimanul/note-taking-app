@@ -20,11 +20,23 @@ module "assign_acr_pull" {
   principal_id        = module.identities.identity_principal_id
 }
 
-// Container Apps environment
-module "containerapps_env" {
-  source              = "./modules/containerapps_env"
+// Storage module for Azure Files
+module "storage" {
+  source              = "./modules/storage"
   resource_group_name = var.resource_group_name
   location            = local.location
+}
+
+// Container Apps environment
+module "containerapps_env" {
+  source               = "./modules/containerapps_env"
+  resource_group_name  = var.resource_group_name
+  location             = local.location
+  storage_account_name = module.storage.storage_account_name
+  storage_account_key  = module.storage.storage_account_key
+  storage_share_name   = module.storage.storage_share_name
+
+  depends_on = [module.storage]
 }
 
 // Postgres (managed) - create if requested
@@ -43,6 +55,13 @@ module "redis" {
   create              = var.create_redis
 }
 
+// Storage module for Azure Files
+module "storage" {
+  source              = "./modules/storage"
+  resource_group_name = var.resource_group_name
+  location            = local.location
+}
+
 // Container Apps: backend (Django web server)
 module "backend_app" {
   source              = "./modules/containerapp"
@@ -54,10 +73,20 @@ module "backend_app" {
   identity_id         = module.identities.identity_id
   ingress_enabled     = true
   target_port         = 8000
-  command             = []  // Uses Dockerfile's default CMD (gunicorn)
+  command             = [] // Uses Dockerfile's default CMD (gunicorn)
   min_replicas        = 1
   cpu                 = 2.0
   memory              = "4Gi"
+
+  volume_mounts = [
+    {
+      name         = "media-files"
+      storage_type = "AzureFile"
+      storage_name = "media-files"
+      mount_path   = "/app/media"
+      access_mode  = "ReadWrite"
+    }
+  ]
 
   env_vars = {
     DEBUG                  = "False"
@@ -65,7 +94,7 @@ module "backend_app" {
     ALLOWED_HOSTS          = "*"
     # CORS_ALLOWED_ORIGINS uses wildcard default in settings.py
   }
-  
+
   secrets = {
     SECRET_KEY        = var.django_secret_key
     GOOGLE_API_KEY    = var.google_api_key
@@ -81,7 +110,8 @@ module "backend_app" {
   depends_on = [
     module.assign_acr_pull,
     module.postgres,
-    module.redis
+    module.redis,
+    module.containerapps_env
   ]
 }
 
@@ -92,19 +122,29 @@ module "worker_app" {
   resource_group_name = var.resource_group_name
   location            = local.location
   environment_id      = module.containerapps_env.containerapps_env_id
-  image               = var.backend_image  // Same image as backend!
+  image               = var.backend_image // Same image as backend!
   identity_id         = module.identities.identity_id
-  ingress_enabled     = false  // Worker doesn't need HTTP ingress
+  ingress_enabled     = false // Worker doesn't need HTTP ingress
   command             = ["celery", "-A", "config", "worker", "-l", "info", "--concurrency=2"]
   min_replicas        = 1
   cpu                 = 2.0
   memory              = "4Gi"
 
+  volume_mounts = [
+    {
+      name         = "media-files"
+      storage_type = "AzureFile"
+      storage_name = "media-files"
+      mount_path   = "/app/media"
+      access_mode  = "ReadWrite"
+    }
+  ]
+
   env_vars = {
     DEBUG                  = "False"
     DJANGO_SETTINGS_MODULE = "config.settings"
   }
-  
+
   secrets = {
     SECRET_KEY        = var.django_secret_key
     GOOGLE_API_KEY    = var.google_api_key
@@ -120,7 +160,8 @@ module "worker_app" {
   depends_on = [
     module.assign_acr_pull,
     module.postgres,
-    module.redis
+    module.redis,
+    module.containerapps_env
   ]
 }
 
@@ -135,12 +176,12 @@ module "frontend_app" {
   identity_id         = module.identities.identity_id
   ingress_enabled     = true
   target_port         = 80
-  command             = []  // Uses Dockerfile's default CMD
-  
+  command             = [] // Uses Dockerfile's default CMD
+
   env_vars = {
     REACT_APP_API_URL = module.backend_app.url
   }
-  
+
   secrets = {}
 
   depends_on = [

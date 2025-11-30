@@ -13,6 +13,16 @@ resource "azurerm_container_app_environment" "main" {
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
 }
 
+resource "azurerm_container_app_environment_storage" "media" {
+  count                            = var.storage_account_name != null ? 1 : 0
+  name                             = "media-files"
+  container_app_environment_id     = azurerm_container_app_environment.main.id
+  account_name                     = var.storage_account_name
+  access_key                       = var.storage_account_key
+  share_name                       = var.storage_share_name
+  access_mode                      = "ReadWrite"
+}
+
 output "containerapps_env_id" {
   description = "Container Apps Environment ID"
   value       = azurerm_container_app_environment.main.id

@@ -97,3 +97,15 @@ variable "tcp_scale_rule" {
   })
   default = null
 }
+
+variable "volume_mounts" {
+  description = "Volume mount configurations"
+  type = list(object({
+    name              = string
+    storage_type      = string
+    storage_name      = string
+    mount_path        = string
+    access_mode       = string
+  }))
+  default = []
+}
