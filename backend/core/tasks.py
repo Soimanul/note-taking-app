@@ -134,7 +134,6 @@ def process_document(document_id):
         raise ConnectionError("AI services are not initialized.")
 
     try:
-    try:
         # Import default_storage inside the task to ensure it uses the correct backend
         # based on environment variables in the forked worker process
         from django.core.files.storage import default_storage
