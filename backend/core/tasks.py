@@ -134,14 +134,15 @@ def process_document(document_id):
         raise ConnectionError("AI services are not initialized.")
 
     try:
+        from django.conf import settings
         doc = Document.objects.get(id=document_id)
         
         print(f"Processing document: {doc.filename} (ID: {document_id})")
         print(f"File path: {doc.filepath}")
 
         # File is directly accessible on mounted Azure Files volume
-        # No need for temporary files - parse directly from mounted storage
-        filepath = doc.filepath.path  # e.g., /app/media/uploads/file.pdf
+        # Construct full filesystem path from MEDIA_ROOT + filepath
+        filepath = os.path.join(settings.MEDIA_ROOT, doc.filepath)
         print(f"Reading file from: {filepath}")
         
         parser = get_parser(doc.fileType)
