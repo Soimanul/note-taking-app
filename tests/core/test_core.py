@@ -88,16 +88,18 @@ class CeleryTaskTests(APITestCase):
         )
 
     # We use @patch to replace external calls with mock objects during the test
-    @patch('django.core.files.storage.default_storage')
+    @patch('django.core.files.storage.storages')
     @patch('core.services.pinecone_index')
     @patch('core.services.embedding_model')
     @patch('core.services.ai_adapter')
     @patch('core.tasks.get_parser')
-    def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone, mock_storage):
+    def test_process_document_success_path(self, mock_get_parser, mock_ai_adapter, mock_embedding, mock_pinecone, mock_storages):
         """
         Test the successful execution of the `process_document` task.
         """
         # Mock the storage to return fake file content
+        mock_storage = MagicMock()
+        mock_storages.__getitem__.return_value = mock_storage
         mock_file = MagicMock()
         mock_file.read.return_value = b"fake pdf content"
         mock_storage.open.return_value.__enter__.return_value = mock_file
@@ -136,13 +138,15 @@ class CeleryTaskTests(APITestCase):
         mock_embedding.encode.assert_called_once()
         mock_pinecone.upsert.assert_called_once()
 
-    @patch('django.core.files.storage.default_storage')
+    @patch('django.core.files.storage.storages')
     @patch('core.tasks.get_parser')
-    def test_process_document_failure_path(self, mock_get_parser, mock_storage):
+    def test_process_document_failure_path(self, mock_get_parser, mock_storages):
         """
         Test the failure path of the `process_document` task (e.g., parsing fails).
         """
         # Mock the storage to return fake file content
+        mock_storage = MagicMock()
+        mock_storages.__getitem__.return_value = mock_storage
         mock_file = MagicMock()
         mock_file.read.return_value = b"fake pdf content"
         mock_storage.open.return_value.__enter__.return_value = mock_file

@@ -9,7 +9,6 @@ User = get_user_model()
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import UploadedFile
 from django.db import models
 
@@ -55,9 +54,12 @@ def _save_uploaded_file(uploaded_file: UploadedFile) -> dict:
     This automatically uses Azure Blob Storage in production or local filesystem in development.
     """
 
-    # Use Django's default storage (respects DEFAULT_FILE_STORAGE setting)
-    filename = default_storage.get_available_name(f"uploads/{uploaded_file.name}")
-    saved_path = default_storage.save(filename, uploaded_file)
+    # Get storage backend dynamically to ensure correct configuration is used
+    from django.core.files.storage import storages
+    storage = storages['default']
+    
+    filename = storage.get_available_name(f"uploads/{uploaded_file.name}")
+    saved_path = storage.save(filename, uploaded_file)
 
     return {
         "filename": uploaded_file.name,
@@ -179,10 +181,12 @@ class DocumentRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
         """
         Delete to clean up associated files and ensure cascade deletion.
         """
+        from django.core.files.storage import storages
+        storage = storages['default']
 
-        if instance.filepath and default_storage.exists(instance.filepath):
+        if instance.filepath and storage.exists(instance.filepath):
             try:
-                default_storage.delete(instance.filepath)
+                storage.delete(instance.filepath)
             except Exception:
                 pass
 
