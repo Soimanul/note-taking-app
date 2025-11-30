@@ -182,26 +182,16 @@ LOGIN_REDIRECT_URL = '/api/documents/'
 # CORS Configuration for Azure Container Apps
 # ==============================================================================
 
-# Read allowed origins from environment variable (comma-separated)
-# Default to wildcard for same-domain Azure Container Apps
-CORS_ALLOWED_ORIGINS_STR = os.environ.get(
-    'CORS_ALLOWED_ORIGINS',
-    'https://*.azurecontainerapps.io'
-)
-
-CORS_ALLOWED_ORIGINS = [
-    origin.strip() 
-    for origin in CORS_ALLOWED_ORIGINS_STR.split(',') 
-    if origin.strip()
+# CORS Configuration for Azure Container Apps
+# Use regex pattern to allow all *.azurecontainerapps.io subdomains
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.azurecontainerapps\.io$",
 ]
 
 # For development, also allow localhost
 if DEBUG:
-    CORS_ALLOWED_ORIGINS += [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost",
-    ]
+    CORS_ALLOWED_ORIGIN_REGEXES.append(r"^http://localhost(:\d+)?$")
+    CORS_ALLOWED_ORIGIN_REGEXES.append(r"^http://127\.0\.0\.1(:\d+)?$")
 
 # Allow credentials (needed for JWT tokens in cookies/headers)
 CORS_ALLOW_CREDENTIALS = True
