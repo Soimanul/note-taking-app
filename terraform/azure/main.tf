@@ -57,25 +57,6 @@ module "backend_app" {
   command             = []  // Uses Dockerfile's default CMD (gunicorn)
   min_replicas        = 1
 
-  startup_probe = {
-    transport              = "HTTP"
-    port                   = 8000
-    path                   = "/health/"
-    period_seconds         = 10   # Check every 10 seconds
-    timeout_seconds        = 5    # Allow 5 seconds for response
-    failure_threshold      = 10   # Allow 10 failures before giving up (100 seconds total)
-  }
-
-  liveness_probe = {
-    transport              = "HTTP"
-    port                   = 8000
-    path                   = "/health/"
-    initial_delay_seconds  = 30   # Wait 30 seconds after startup
-    period_seconds         = 30   # Check every 30 seconds
-    timeout_seconds        = 5    # Allow 5 seconds for response
-    failure_threshold      = 3    # Allow 3 failures before restart
-  }
-
   env_vars = {
     DEBUG                  = "False"
     DJANGO_SETTINGS_MODULE = "config.settings"

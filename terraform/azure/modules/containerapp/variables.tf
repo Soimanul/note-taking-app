@@ -89,34 +89,6 @@ variable "memory" {
   default     = "0.5Gi"
 }
 
-variable "startup_probe" {
-  description = "Startup probe configuration"
-  type = object({
-    transport              = string
-    port                   = number
-    path                   = optional(string)
-    initial_delay_seconds  = optional(number, 3)
-    period_seconds         = optional(number, 10)
-    timeout_seconds        = optional(number, 3)
-    failure_threshold      = optional(number, 3)
-  })
-  default = null
-}
-
-variable "liveness_probe" {
-  description = "Liveness probe configuration"
-  type = object({
-    transport              = string
-    port                   = number
-    path                   = optional(string)
-    initial_delay_seconds  = optional(number, 0)
-    period_seconds         = optional(number, 10)
-    timeout_seconds        = optional(number, 1)
-    failure_threshold      = optional(number, 3)
-  })
-  default = null
-}
-
 variable "tcp_scale_rule" {
   description = "TCP scale rule configuration"
   type = object({
