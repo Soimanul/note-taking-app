@@ -54,16 +54,38 @@ def _save_uploaded_file(uploaded_file: UploadedFile) -> dict:
     Files are stored at /app/media/uploads/ which is shared between backend and worker.
     """
     from django.core.files.storage import default_storage
+    from django.conf import settings
     
-    filename = default_storage.get_available_name(f"uploads/{uploaded_file.name}")
-    saved_path = default_storage.save(filename, uploaded_file)
+    try:
+        # Ensure uploads directory exists
+        uploads_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+        os.makedirs(uploads_dir, exist_ok=True)
+        print(f"Uploads directory: {uploads_dir}")
+        
+        filename = default_storage.get_available_name(f"uploads/{uploaded_file.name}")
+        print(f"Saving file as: {filename}")
+        
+        saved_path = default_storage.save(filename, uploaded_file)
+        print(f"File saved successfully to: {saved_path}")
+        
+        # Verify file exists
+        full_path = os.path.join(settings.MEDIA_ROOT, saved_path)
+        if os.path.exists(full_path):
+            print(f"File verified at: {full_path}")
+        else:
+            print(f"WARNING: File not found at: {full_path}")
 
-    return {
-        "filename": uploaded_file.name,
-        "filepath": saved_path,  # Storage key (e.g., "uploads/file.pdf")
-        "fileType": os.path.splitext(uploaded_file.name)[1].lower().strip("."),
-        "size": uploaded_file.size,
-    }
+        return {
+            "filename": uploaded_file.name,
+            "filepath": saved_path,  # Storage key (e.g., "uploads/file.pdf")
+            "fileType": os.path.splitext(uploaded_file.name)[1].lower().strip("."),
+            "size": uploaded_file.size,
+        }
+    except Exception as e:
+        print(f"ERROR saving file: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 # ==============================================================================
@@ -109,29 +131,41 @@ class UserCreate(generics.CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except Exception as e:
             print(f"User creation failed: {str(e)}")
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# ==============================================================================
-#  2. Document List & Create View
-# ==============================================================================
-class DocumentListCreate(generics.ListCreateAPIView):
-    """
-    Handles GET and POST requests for docs only from authenticated users.
-    """
-
-    serializer_class = DocumentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def get_queryset(self):
-        """
-        This view should only return documents owned by the currently authenticated user.
-        """
-
-        return Document.objects.filter(user=self.request.user).order_by("-uploadDate")
-
     def create(self, request, *args, **kwargs):
+        """
+        1. Saves the file.
+        2. Creates the database record.
+        3. Triggers the async processing task.        
+        """
+        
+        try:
+            # Save the file locally
+            uploaded_file = request.FILES.get('file')
+            if not uploaded_file:
+                return Response({"detail": "No file was provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+            print(f"Received file upload: {uploaded_file.name}, size: {uploaded_file.size}")
+            
+            file_metadata = _save_uploaded_file(uploaded_file)
+            
+            serializer = self.get_serializer(data=file_metadata)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            new_document_id = serializer.instance.id
+            print(f"Document created with ID: {new_document_id}, triggering processing task")
+            process_document.delay(str(new_document_id))
+
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            print(f"ERROR in document upload: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"detail": f"File upload failed: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         """
         1. Saves the file.
         2. Creates the database record.
