@@ -2,7 +2,6 @@ import os
 import tempfile
 from abc import ABC, abstractmethod
 from celery import shared_task
-from django.core.files.storage import default_storage
 import fitz
 import docx
 from .models import Document, GeneratedContent, Log
@@ -135,6 +134,11 @@ def process_document(document_id):
         raise ConnectionError("AI services are not initialized.")
 
     try:
+    try:
+        # Import default_storage inside the task to ensure it uses the correct backend
+        # based on environment variables in the forked worker process
+        from django.core.files.storage import default_storage
+        
         doc = Document.objects.get(id=document_id)
         
         print(f"Processing document: {doc.filename} (ID: {document_id})")
@@ -143,8 +147,7 @@ def process_document(document_id):
 
         # Download file from storage to temporary location
         # This works with both Azure Blob Storage and local filesystem
-        with default_storage.open(doc.filepath, 'rb') as storage_file:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{doc.fileType}") as temp_file:
+        with default_storage.open(doc.filepath, 'rb') as storage_file:doc.fileType}") as temp_file:
                 temp_file.write(storage_file.read())
                 temp_path = temp_file.name
 
