@@ -244,6 +244,11 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Azure Files (SMB/CIFS) doesn't support chmod operations
+# Setting these to None prevents Django from trying to set permissions
+FILE_UPLOAD_PERMISSIONS = None
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = None
+
 print(f"✓ Using filesystem storage at: {MEDIA_ROOT}")
 
 # ==============================================================================
