@@ -55,13 +55,6 @@ module "redis" {
   create              = var.create_redis
 }
 
-// Storage module for Azure Files
-module "storage" {
-  source              = "./modules/storage"
-  resource_group_name = var.resource_group_name
-  location            = local.location
-}
-
 // Container Apps: backend (Django web server)
 module "backend_app" {
   source              = "./modules/containerapp"
