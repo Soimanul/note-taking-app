@@ -88,7 +88,7 @@ class CeleryTaskTests(APITestCase):
         )
 
     # We use @patch to replace external calls with mock objects during the test
-    @patch('core.tasks.default_storage')
+    @patch('django.core.files.storage.default_storage')
     @patch('core.services.pinecone_index')
     @patch('core.services.embedding_model')
     @patch('core.services.ai_adapter')
@@ -136,7 +136,7 @@ class CeleryTaskTests(APITestCase):
         mock_embedding.encode.assert_called_once()
         mock_pinecone.upsert.assert_called_once()
 
-    @patch('core.tasks.default_storage')
+    @patch('django.core.files.storage.default_storage')
     @patch('core.tasks.get_parser')
     def test_process_document_failure_path(self, mock_get_parser, mock_storage):
         """
