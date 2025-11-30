@@ -240,9 +240,9 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 # ==============================================================================
 
 # Azure Blob Storage configuration for production
-AZURE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-AZURE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-AZURE_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media')
+AZURE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME', '').strip()
+AZURE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY', '').strip()
+AZURE_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media').strip() or 'media'
 
 if AZURE_ACCOUNT_NAME and AZURE_ACCOUNT_KEY:
     # Use Azure Blob Storage in production
@@ -254,7 +254,7 @@ else:
     # Use local filesystem for development
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    print("⚠ WARNING: Using local filesystem storage (Azure credentials not found)")
+    print(f"⚠ WARNING: Using local filesystem storage (AZURE_ACCOUNT_NAME='{AZURE_ACCOUNT_NAME}', AZURE_ACCOUNT_KEY={'set' if AZURE_ACCOUNT_KEY else 'not set'})")
 
 # ==============================================================================
 # Startup Validation
