@@ -43,6 +43,7 @@ class GenerativeAIAdapter(ABC):
 class GeminiAdapter(GenerativeAIAdapter):
     """
     Adapter for the Google Gemini API.
+    Automatically selects the latest available Flash model.
     """
 
     def __init__(self):
@@ -51,11 +52,52 @@ class GeminiAdapter(GenerativeAIAdapter):
             if not api_key:
                 raise ValueError("GOOGLE_API_KEY environment variable not set.")
             genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
-            print("Gemini Adapter initialized successfully.")
+
+            # Get the latest Flash model
+            model_name = self._get_latest_flash_model()
+            self.model = genai.GenerativeModel(model_name)
+            print(f"Gemini Adapter initialized successfully with model: {model_name}")
         except Exception as e:
             self.model = None
             print(f"Error initializing Gemini Adapter: {e}")
+
+    def _get_latest_flash_model(self) -> str:
+        """
+        Lists available Gemini models and returns the latest Flash model.
+        Falls back to stable model name if listing fails.
+        """
+        try:
+            # List all available models
+            available_models = genai.list_models()
+
+            # Filter for Flash models that support generateContent
+            flash_models = [
+                model for model in available_models
+                if 'flash' in model.name.lower()
+                and 'generateContent' in model.supported_generation_methods
+            ]
+
+            if flash_models:
+                # Sort by name to get the latest version (assumes newer versions have higher version numbers)
+                # Models are named like: models/gemini-2.5-flash, models/gemini-2.0-flash, etc.
+                flash_models.sort(key=lambda m: m.name, reverse=True)
+                latest_model = flash_models[0]
+
+                # Extract just the model name (remove "models/" prefix if present)
+                model_name = latest_model.name.split('/')[-1]
+
+                print(f"Available Flash models: {[m.name for m in flash_models[:3]]}")
+                print(f"Selected model: {model_name}")
+                return model_name
+            else:
+                print("No Flash models found, using stable alias")
+                return "gemini-2.0-flash"
+
+        except Exception as e:
+            print(f"Error listing models: {e}")
+            # Use stable alias that always points to latest stable Flash model
+            print("Falling back to stable model alias: gemini-2.0-flash")
+            return "gemini-2.0-flash"
 
     def generate_notes(self, text: str) -> str:
         """
